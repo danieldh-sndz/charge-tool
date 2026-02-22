@@ -1,21 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Cloud, CloudOff } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot } from 'firebase/firestore';
-
-// Initialize Firebase
-let app, auth, db, appId;
-try {
-  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-} catch (e) {
-  console.error("Firebase init failed", e);
-}
-
+import React, { useState, useMemo, useRef } from 'react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Download, Upload } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 const initialNurses = [
   { id: 1, noChemo: false, name: 'RN 1', locked: false },
   { id: 2, noChemo: false, name: 'RN 2', locked: false },
@@ -75,17 +60,7 @@ export default function App() {
   const [isClearingAssignments, setIsClearingAssignments] = useState(false);
   const [hoveredNurse, setHoveredNurse] = useState(null);
   
-  // Cloud Sync State
-  const [user, setUser] = useState(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const nursesRef = useRef(nurses);
-  const roomsRef = useRef(rooms);
-
-  // Update refs to avoid dependency cycles in onSnapshot
-  useEffect(() => {
-    nursesRef.current = nurses;
-    roomsRef.current = rooms;
-  }, [nurses, rooms]);
+  const fileInputRef = useRef(null);
 
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);
@@ -96,77 +71,6 @@ export default function App() {
     chemo: 5,
     notIndep: 5
   });
-
-  // --- Firebase Auth & Setup ---
-  useEffect(() => {
-    if (!auth) return;
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth Error:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user || !db) return;
-    
-    setIsSyncing(true);
-    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'shiftConfig', 'current');
-    
-    const unsubscribe = onSnapshot(docRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        // Only update local state if it differs from the cloud to prevent cursor jumping
-        if (data.nurses && JSON.stringify(data.nurses) !== JSON.stringify(nursesRef.current)) {
-          setNurses(data.nurses);
-        }
-        if (data.rooms && JSON.stringify(data.rooms) !== JSON.stringify(roomsRef.current)) {
-          setRooms(data.rooms);
-        }
-      } else {
-        // Initialize the cloud doc if it's empty
-        setDoc(docRef, { nurses: initialNurses, rooms: initialRooms }).catch(console.error);
-      }
-      setIsSyncing(false);
-    }, (error) => {
-      console.error("Firestore Listener Error:", error);
-      setIsSyncing(false);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // --- State Updaters with Cloud Sync ---
-  const syncToCloud = (newNurses, newRooms) => {
-    if (!user || !db) return;
-    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'shiftConfig', 'current');
-    setDoc(docRef, { nurses: newNurses, rooms: newRooms }).catch(console.error);
-  };
-
-  const handleNursesChange = (newNurses) => {
-    setNurses(newNurses);
-    syncToCloud(newNurses, rooms);
-  };
-
-  const handleRoomsChange = (newRooms) => {
-    setRooms(newRooms);
-    syncToCloud(nurses, newRooms);
-  };
-
-  const handleBothChange = (newNurses, newRooms) => {
-    setNurses(newNurses);
-    setRooms(newRooms);
-    syncToCloud(newNurses, newRooms);
-  };
 
   const nurseStats = useMemo(() => {
     const stats = {};
@@ -217,6 +121,43 @@ export default function App() {
 
     return { ...stats, activeNursesCount };
   }, [rooms, nurses]);
+
+  // Save/Load Configuration Functions
+  const exportConfig = () => {
+    const config = { nurses, rooms };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `charge_nurse_config_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    setRationale("Configuration exported successfully.");
+  };
+
+  const importConfig = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const config = JSON.parse(e.target.result);
+        if (config.nurses && config.rooms) {
+          setNurses(config.nurses);
+          setRooms(config.rooms);
+          setRationale("Configuration imported successfully.");
+        } else {
+          setRationale("Error: Invalid configuration file format.");
+        }
+      } catch (error) {
+        setRationale("Error: Could not parse the configuration file.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset the input so the same file can be uploaded again if needed
+    event.target.value = null;
+  };
 
   const shuffleArray = (array) => {
     const newArr = [...array];
@@ -269,7 +210,7 @@ export default function App() {
     shuffleArray(filledIndices).slice(0, targetChemos).forEach(idx => { nextRooms[idx].chemo = true; });
     shuffleArray(filledIndices).slice(0, targetNotIndep).forEach(idx => { nextRooms[idx].notIndep = true; });
 
-    handleRoomsChange(nextRooms);
+    setRooms(nextRooms);
     setRationale(null);
     setShowRemixModal(false);
   };
@@ -286,7 +227,7 @@ export default function App() {
       }
       return room;
     });
-    handleRoomsChange(newRooms);
+    setRooms(newRooms);
     setRationale("CNAs automatically assigned to all Acuity 4 patients, Admissions, Not Independent patients, and Room H (if occupied).");
   };
 
@@ -297,7 +238,7 @@ export default function App() {
         const defaultTx = room.room === 'H' ? '' : `Pt ${room.room}`;
         return { ...room, tx: defaultTx, acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
       });
-      handleRoomsChange(newRooms);
+      setRooms(newRooms);
       setRationale("All unlocked rooms reset to default state (Pt #, Acuity 2).");
       setIsClearing(false);
     } else {
@@ -314,7 +255,7 @@ export default function App() {
         if (nurse && nurse.locked) return room;
         return { ...room, rn: '-' };
       });
-      handleRoomsChange(newRooms);
+      setRooms(newRooms);
       setRationale("Assignments cleared (locked assignments preserved).");
       setIsClearingAssignments(false);
     } else {
@@ -427,8 +368,7 @@ export default function App() {
       if (effectivelyLockedRoomIds.has(r.room)) return r;
       return { ...r, rn: (r.tx && r.tx.trim() !== '') ? (assignments[r.room] || '-') : '-' };
     });
-    
-    handleRoomsChange(newRooms);
+    setRooms(newRooms);
     setRationale({
       stats: { locked: lockedCount, chemo: placedChemo, admits: placedAdmits, acuity4: placedAcuity4, assignedCount: Object.keys(assignments).length - unassignedRooms.length },
       unassigned: unassignedRooms
@@ -438,49 +378,41 @@ export default function App() {
   const handleNurseRoomsChange = (nurseName, value) => {
     if (!nurseName) return;
     const roomIds = value.split(/[\s,]+/).filter(Boolean).map(id => id.toUpperCase());
-    const newRooms = rooms.map(room => {
+    setRooms(prevRooms => prevRooms.map(room => {
       const isAssignedHere = roomIds.includes(String(room.room).toUpperCase());
       if (isAssignedHere) return { ...room, rn: nurseName };
       else if (room.rn === nurseName) return { ...room, rn: '-' };
       return room;
-    });
-    handleRoomsChange(newRooms);
+    }));
   };
 
   const updateRoom = (index, field, value) => {
     const newRooms = [...rooms];
     newRooms[index] = { ...newRooms[index], [field]: value };
-    handleRoomsChange(newRooms);
+    setRooms(newRooms);
   };
 
   const toggleLock = (index) => {
     const newRooms = [...rooms];
     newRooms[index] = { ...newRooms[index], locked: !newRooms[index].locked };
-    handleRoomsChange(newRooms);
+    setRooms(newRooms);
   };
 
   const updateNurse = (index, field, value) => {
     const newNurses = [...nurses];
     const oldName = newNurses[index].name;
     newNurses[index] = { ...newNurses[index], [field]: value };
-    
-    let newRooms = rooms;
+    setNurses(newNurses);
     if (field === 'name' && oldName && value) {
-      newRooms = rooms.map(room => room.rn === oldName ? { ...room, rn: value } : room);
+      setRooms(rooms.map(room => room.rn === oldName ? { ...room, rn: value } : room));
     }
-    
-    handleBothChange(newNurses, newRooms);
   };
 
-  const addNurse = () => {
-    const newNurses = [...nurses, { id: Date.now(), noChemo: false, name: `RN ${nurses.length + 1}`, locked: false }];
-    handleNursesChange(newNurses);
-  };
-
+  const addNurse = () => setNurses([...nurses, { id: Date.now(), noChemo: false, name: `RN ${nurses.length + 1}`, locked: false }]);
   const toggleNurseLock = (index) => {
     const newNurses = [...nurses];
     newNurses[index] = { ...newNurses[index], locked: !newNurses[index].locked };
-    handleNursesChange(newNurses);
+    setNurses(newNurses);
   };
 
   const getRoomCoordinates = (roomNum) => {
@@ -628,39 +560,36 @@ export default function App() {
           </div>
           {/* 6. IMC - Teal */}
           <div className="flex flex-col items-center justify-center p-3 bg-teal-50 rounded-lg border border-teal-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">IMC</span>
-            <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.imcCount}</span>
-          </div>
-          {/* 7. Admits - Blue */}
-          <div className="flex flex-col items-center justify-center p-3 bg-blue-50 rounded-lg border border-blue-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">Admits</span>
-            <span className="text-3xl font-black text-blue-900 leading-none">{summaryStats.admitsCount}</span>
-          </div>
-          {/* 8. Chemo - Indigo */}
-          <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Chemo</span>
-            <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.chemoCount}</span>
-          </div>
-          {/* 9. CNA Assigned - Fuchsia */}
-          <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-fuchsia-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
-            <span className="text-3xl font-black text-fuchsia-900 leading-none">{summaryStats.cnaCount}</span>
+            <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
+            <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
           </div>
         </div>
 
-        {/* Cloud Sync Status */}
-        <div className="flex flex-wrap items-center justify-end w-full xl:w-auto">
-           {user ? (
-             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-200 shadow-sm transition-all">
-               {isSyncing ? <RefreshCw size={16} className="animate-spin text-emerald-600" /> : <Cloud size={16} className="text-emerald-600" />}
-               <span>Live Cloud Sync On</span>
-             </div>
-           ) : (
-             <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-500 rounded-lg text-sm font-medium border border-slate-200">
-               <CloudOff size={16} />
-               <span>Connecting Database...</span>
-             </div>
-           )}
+        {/* Configuration Save/Load */}
+        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={importConfig} 
+            accept=".json" 
+            style={{ display: 'none' }} 
+          />
+          <button 
+            onClick={() => fileInputRef.current.click()}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200"
+            title="Import Configuration"
+          >
+            <Upload size={16} />
+            <span className="hidden sm:inline">Import</span>
+          </button>
+          <button 
+            onClick={exportConfig}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200"
+            title="Export Configuration"
+          >
+            <Download size={16} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
         </div>
       </header>
 

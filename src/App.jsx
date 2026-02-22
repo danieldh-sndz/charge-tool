@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
     import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X } from 'lucide-react';
+    import { Analytics } from '@vercel/analytics/react';
     
     const initialNurses = [
       { id: 1, noChemo: false, name: 'RN 1', locked: false },
@@ -748,6 +749,7 @@ import React, { useState, useMemo } from 'react';
               </div>
             </div>
           </div>
+          <Analytics />
         </div>
       );
     }

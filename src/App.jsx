@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Download, Upload } from 'lucide-react';
-import { Analytics } from '@vercel/analytics/react';
+import React, { useState, useMemo } from 'react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X } from 'lucide-react';
+
 const initialNurses = [
   { id: 1, noChemo: false, name: 'RN 1', locked: false },
   { id: 2, noChemo: false, name: 'RN 2', locked: false },
@@ -60,8 +60,6 @@ export default function App() {
   const [isClearingAssignments, setIsClearingAssignments] = useState(false);
   const [hoveredNurse, setHoveredNurse] = useState(null);
   
-  const fileInputRef = useRef(null);
-
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);
   const [remixCounts, setRemixCounts] = useState({
@@ -121,43 +119,6 @@ export default function App() {
 
     return { ...stats, activeNursesCount };
   }, [rooms, nurses]);
-
-  // Save/Load Configuration Functions
-  const exportConfig = () => {
-    const config = { nurses, rooms };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(config));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `charge_nurse_config_${new Date().toISOString().slice(0,10)}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-    setRationale("Configuration exported successfully.");
-  };
-
-  const importConfig = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const config = JSON.parse(e.target.result);
-        if (config.nurses && config.rooms) {
-          setNurses(config.nurses);
-          setRooms(config.rooms);
-          setRationale("Configuration imported successfully.");
-        } else {
-          setRationale("Error: Invalid configuration file format.");
-        }
-      } catch (error) {
-        setRationale("Error: Could not parse the configuration file.");
-      }
-    };
-    reader.readAsText(file);
-    // Reset the input so the same file can be uploaded again if needed
-    event.target.value = null;
-  };
 
   const shuffleArray = (array) => {
     const newArr = [...array];
@@ -533,75 +494,52 @@ export default function App() {
       {/* Header / Summary */}
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-          {/* 1. Nurses - Red */}
           <div className="flex flex-col items-center justify-center p-3 bg-red-50 rounded-lg border border-red-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-red-600 font-bold uppercase tracking-wider mb-1">Nurses</span>
             <span className="text-3xl font-black text-red-900 leading-none">{summaryStats.activeNursesCount}</span>
           </div>
-          {/* 2. Census - Orange */}
           <div className="flex flex-col items-center justify-center p-3 bg-orange-50 rounded-lg border border-orange-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-orange-600 font-bold uppercase tracking-wider mb-1">Census</span>
             <span className="text-3xl font-black text-orange-900 leading-none">{summaryStats.census}</span>
           </div>
-          {/* 3. Total Acuity - Amber (Yellow) */}
           <div className="flex flex-col items-center justify-center p-3 bg-amber-50 rounded-lg border border-amber-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-amber-600 font-bold uppercase tracking-wider mb-1">Total Acuity</span>
             <span className="text-3xl font-black text-amber-900 leading-none">{summaryStats.totalAcuity}</span>
           </div>
-          {/* 4. Acuity 4 - Green */}
           <div className="flex flex-col items-center justify-center p-3 bg-green-50 rounded-lg border border-green-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-green-600 font-bold uppercase tracking-wider mb-1">Acuity 4</span>
             <span className="text-3xl font-black text-green-900 leading-none">{summaryStats.acuity4Count}</span>
           </div>
-          {/* 5. Acuity 3 - Lime */}
           <div className="flex flex-col items-center justify-center p-3 bg-lime-50 rounded-lg border border-lime-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-lime-600 font-bold uppercase tracking-wider mb-1">Acuity 3</span>
             <span className="text-3xl font-black text-lime-900 leading-none">{summaryStats.acuity3Count}</span>
           </div>
-          {/* 6. IMC - Teal */}
+          <div className="flex flex-col items-center justify-center p-3 bg-blue-50 rounded-lg border border-blue-100 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">IMC</span>
+            <span className="text-3xl font-black text-blue-900 leading-none">{summaryStats.imcCount}</span>
+          </div>
+          <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Admits</span>
+            <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.admitsCount}</span>
+          </div>
+          <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-100 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-fuchsia-600 font-bold uppercase tracking-wider mb-1">Chemo</span>
+            <span className="text-3xl font-black text-fuchsia-900 leading-none">{summaryStats.chemoCount}</span>
+          </div>
           <div className="flex flex-col items-center justify-center p-3 bg-teal-50 rounded-lg border border-teal-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
             <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
           </div>
         </div>
-
-        {/* Configuration Save/Load */}
-        <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-end">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={importConfig} 
-            accept=".json" 
-            style={{ display: 'none' }} 
-          />
-          <button 
-            onClick={() => fileInputRef.current.click()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200"
-            title="Import Configuration"
-          >
-            <Upload size={16} />
-            <span className="hidden sm:inline">Import</span>
-          </button>
-          <button 
-            onClick={exportConfig}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-medium transition-colors border border-slate-200"
-            title="Export Configuration"
-          >
-            <Download size={16} />
-            <span className="hidden sm:inline">Export</span>
-          </button>
-        </div>
       </header>
 
       {rationale && (
-        <div className={`mb-6 border p-5 rounded-xl flex gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 ${typeof rationale === 'object' && rationale?.unassigned?.length > 0 ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
-          <div className="shrink-0 mt-1">
-            {typeof rationale === 'object' && rationale?.unassigned?.length > 0 ? <AlertTriangle className="text-amber-600" size={24} /> : <CheckCircle2 className="text-blue-600" size={24} />}
-          </div>
+        <div className={`mb-6 border p-5 rounded-xl flex gap-3 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 ${rationale?.unassigned?.length > 0 ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+          <div className="shrink-0 mt-1">{rationale?.unassigned?.length > 0 ? <AlertTriangle className="text-amber-600" size={24} /> : <CheckCircle2 className="text-blue-600" size={24} />}</div>
           <div className="w-full">
+            <h3 className={`font-bold mb-2 flex items-center gap-2 ${rationale?.unassigned?.length > 0 ? 'text-amber-800' : 'text-blue-800'}`}>Assignment Analysis</h3>
             {typeof rationale === 'object' && rationale.stats ? (
               <>
-                <h3 className={`font-bold mb-2 flex items-center gap-2 ${rationale?.unassigned?.length > 0 ? 'text-amber-800' : 'text-blue-800'}`}>Assignment Analysis</h3>
                 <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed opacity-90 mb-3">
                   <li><strong>Success:</strong> Auto-assigned {rationale.stats.assignedCount} patients while preserving {rationale.stats.locked} locked assignments.</li>
                   <li><strong>Chemo Safety:</strong> Placed {rationale.stats.chemo} active Chemo patients with certified RNs.</li>
@@ -616,7 +554,7 @@ export default function App() {
                   </div>
                 )}
               </>
-            ) : <p className="text-sm leading-relaxed font-medium">{String(rationale)}</p>}
+            ) : <p className="text-sm leading-relaxed">{String(rationale)}</p>}
           </div>
         </div>
       )}
@@ -646,6 +584,7 @@ export default function App() {
                 <tbody className="divide-y divide-slate-100">
                   {nurses.map((nurse, index) => {
                     const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0 };
+                    
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
                     const patientCountWarning = stats.rooms.length > 4;
                     const admitWarning = stats.admits > 1;
@@ -653,6 +592,7 @@ export default function App() {
                     const acuity4Warning = stats.acuity4Count > 1;
                     const acuity4LoadWarning = stats.acuity4Count > 0 && stats.rooms.length > 3;
                     const hasCriticalWarning = chemoWarning || patientCountWarning || admitWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
+                    
                     const admitLoadWarning = stats.admits > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
                     const acuity4WithAdmitWarning = stats.acuity4Count > 0 && stats.admits > 0;

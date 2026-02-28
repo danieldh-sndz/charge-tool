@@ -135,6 +135,7 @@ export default function App() {
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [newNurseName, setNewNurseName] = useState('');
   const [isClearingAssignments, setIsClearingAssignments] = useState(false);
   const [hoveredNurse, setHoveredNurse] = useState(null);
 
@@ -456,7 +457,18 @@ export default function App() {
     }
   };
 
-  const addNurse = () => setNurses([...nurses, { id: Date.now(), noChemo: false, name: `RN ${nurses.length + 1}`, locked: false }]);
+  const addNurse = () => {
+    const name = newNurseName.trim();
+    if (!name) return;
+    setNurses([...nurses, { id: Date.now(), noChemo: false, name, locked: false }]);
+    setNewNurseName('');
+  };
+
+  const deleteNurse = (index) => {
+    const nurse = nurses[index];
+    setRooms(rooms.map(room => room.rn === nurse.name ? { ...room, rn: '-' } : room));
+    setNurses(nurses.filter((_, i) => i !== index));
+  };
 
   const toggleNurseLock = (index) => {
     const newNurses = [...nurses];
@@ -591,7 +603,6 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <button onClick={autoAssign} className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm" title="Auto-Assign Patients"><Wand2 size={14} />Auto</button>
                 <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
-                <button onClick={addNurse} className="text-blue-600 hover:text-blue-800 p-1" title="Add Nurse"><Plus size={18} /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -603,6 +614,7 @@ export default function App() {
                     <th className="px-3 py-2">RN Name</th>
                     <th className="px-3 py-2">Assigned Rooms</th>
                     <th className="px-3 py-2 text-center">Total Acuity</th>
+                    <th className="px-2 py-2 w-8"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -686,9 +698,24 @@ export default function App() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center font-semibold"><span className={`inline-block px-2 py-1 rounded-md min-w-[2rem] ${acuityClass} ${hasCriticalWarning || hasSoftWarning ? 'cursor-help' : ''}`} title={hasCriticalWarning || hasSoftWarning ? tooltipMsgs.filter(m => m !== "Assignment Locked").join('\n') : undefined}>{stats.acuity}</span></td>
+                        <td className="px-2 py-1 text-center">
+                          <button onClick={() => deleteNurse(index)} className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Remove Nurse"><X size={14} /></button>
+                        </td>
                       </tr>
                     );
                   })}
+                  <tr className="border-t border-slate-200 bg-slate-50">
+                    <td colSpan={6} className="px-3 py-2">
+                      <input
+                        type="text"
+                        className="w-full bg-transparent text-sm placeholder-slate-400 focus:outline-none"
+                        placeholder="+ Add a nurse..."
+                        value={newNurseName}
+                        onChange={(e) => setNewNurseName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addNurse()}
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

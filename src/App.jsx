@@ -61,68 +61,162 @@ const shuffleArray = (array) => {
   return newArr;
 };
 
-// Pure helper – moved to module scope so it isn't recreated on every render
+// Room geometry for L-shaped floor plan:
+//   Main vertical corridor (center x=250): rooms 7-14 on right, 15-23 on left
+//   Horizontal corridor (center y=480): rooms 24-30 above, 1-6 below
 const getRoomCoordinates = (roomNum) => {
-  if (roomNum === 'H') return { x: 300, y: 30, rotation: 0, width: 70, height: 40 };
+  const W = 68, H = 38;
+  if (roomNum === 'H') return { x: 250, y: 22, width: W, height: H };
   const num = parseInt(roomNum, 10);
-  const rightWallX = 360, leftWallX = 240, startY = 80, gapY = 50;
-
-  if (num >= 7 && num <= 14) {
-    const idx = 14 - num;
-    return { x: rightWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
-  }
-
-  if (num >= 1 && num <= 6) {
-    const idx = 6 - num;
-    const startYAngled = 495;
-    const startX = rightWallX;
-    return { x: startX + (idx * 25), y: startYAngled + (idx * 43), rotation: -30, width: 70, height: 40 };
-  }
-
-  if (num >= 15 && num <= 23) {
-    const idx = num - 15;
-    return { x: leftWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
-  }
-
-  if (num >= 24 && num <= 30) {
-    const idx = num - 24;
-    const startYAngled = 545;
-    const startX = leftWallX;
-    return { x: startX + (idx * 25), y: startYAngled + (idx * 43), rotation: -30, width: 70, height: 40 };
-  }
-
-  return { x: 0, y: 0, rotation: 0, width: 70, height: 40 };
+  // Right of main corridor: 14 at top → 7 at bottom
+  if (num >= 7 && num <= 14)  return { x: 326, y: 70 + (14 - num) * 44, width: W, height: H };
+  // Left of main corridor: 15 at top → 23 at bottom
+  if (num >= 15 && num <= 23) return { x: 174, y: 70 + (num - 15) * 44, width: W, height: H };
+  // Above horizontal corridor: 24 at left → 30 at right
+  if (num >= 24 && num <= 30) return { x: 326 + (num - 24) * 50, y: 426, width: W, height: H };
+  // Below horizontal corridor: 1 at left → 6 at right
+  if (num >= 1 && num <= 6)   return { x: 326 + (num - 1)  * 50, y: 534, width: W, height: H };
+  return { x: 0, y: 0, width: W, height: H };
 };
 
+const NURSE_COLORS = [
+  { fill: '#dbeafe', stroke: '#3b82f6', text: '#1d4ed8' },
+  { fill: '#dcfce7', stroke: '#16a34a', text: '#15803d' },
+  { fill: '#fef3c7', stroke: '#d97706', text: '#92400e' },
+  { fill: '#fce7f3', stroke: '#db2777', text: '#9d174d' },
+  { fill: '#ede9fe', stroke: '#7c3aed', text: '#5b21b6' },
+  { fill: '#e0f2fe', stroke: '#0284c7', text: '#075985' },
+  { fill: '#fff7ed', stroke: '#ea580c', text: '#9a3412' },
+  { fill: '#f0fdf4', stroke: '#15803d', text: '#14532d' },
+  { fill: '#fdf4ff', stroke: '#c026d3', text: '#86198f' },
+  { fill: '#fefce8', stroke: '#ca8a04', text: '#713f12' },
+];
+
+const ACUITY_COLOR = { 1: '#94a3b8', 2: '#94a3b8', 3: '#f59e0b', 4: '#ef4444' };
+
 // Defined outside App so React doesn't unmount/remount it on every parent render
-function UnitMap({ rooms, hoveredNurse }) {
+function UnitMap({ rooms, nurses, hoveredNurse }) {
+  const nurseColorMap = {};
+  nurses.filter(n => n.name?.trim()).forEach((nurse, i) => {
+    nurseColorMap[nurse.name] = NURSE_COLORS[i % NURSE_COLORS.length];
+  });
+  const hoveredColor = hoveredNurse ? (nurseColorMap[hoveredNurse] || NURSE_COLORS[0]) : null;
+
   return (
-    <div className="bg-slate-100 rounded-xl border border-slate-200 p-6 flex justify-center overflow-hidden">
-      <svg width="100%" height="550" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid meet">
-        <path d="M 300,50 L 300,450 L 500,800" stroke="#e2e8f0" strokeWidth="100" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <div className="bg-slate-100 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
+      {/*
+        Corridor geometry (all coordinates in viewBox units):
+          Main corridor  — vertical,   x 212–288,  y 42–459
+          Cross corridor — horizontal, x 212–668,  y 449–511
+          Junction area  — where they meet (x 212–288, y 449–511) covered by both paths
+      */}
+      <svg width="100%" height="530" viewBox="0 0 678 590" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <filter id="room-shadow" x="-25%" y="-25%" width="150%" height="150%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#00000012" />
+          </filter>
+        </defs>
+
+        {/* Corridor walls (outer shell — L-shape) */}
+        <path d="M 212,42 H 288 V 449 H 668 V 511 H 212 Z" fill="#cbd5e1" />
+        {/* Corridor floor (inner floor — L-shape, inset 8px) */}
+        <path d="M 220,50 H 280 V 457 H 660 V 503 H 220 Z" fill="#f1f5f9" />
+
+        {/* Centre-line dashes */}
+        <line x1="250" y1="52" x2="250" y2="455" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
+        <line x1="222" y1="480" x2="658" y2="480" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
+
         {rooms.map((room) => {
-          const { x, y, rotation, width, height } = getRoomCoordinates(room.room);
-          const hasRn = room.rn && room.rn !== '-';
-          const isHovered = hoveredNurse && room.rn === hoveredNurse;
+          const { x, y, width, height } = getRoomCoordinates(room.room);
+          const hasRn  = room.rn && room.rn !== '-';
+          const isFilled     = room.tx && room.tx.trim() !== '';
+          const isHighlighted = hoveredNurse && room.rn === hoveredNurse;
+          const isDimmed      = !!hoveredNurse && !isHighlighted;
+          const acuity = Number(room.acuity);
+
+          let fillColor, strokeColor, strokeWidth, textColor;
+          if (!isFilled) {
+            fillColor = '#f1f5f9'; strokeColor = '#e2e8f0'; strokeWidth = 1;   textColor = '#94a3b8';
+          } else if (isHighlighted) {
+            fillColor = hoveredColor.fill; strokeColor = hoveredColor.stroke; strokeWidth = 2.5; textColor = hoveredColor.text;
+          } else {
+            fillColor = '#ffffff'; strokeColor = hasRn ? '#94a3b8' : '#d1d5db'; strokeWidth = 1.5; textColor = '#374151';
+          }
+
+          const displayName = hasRn && isFilled
+            ? (room.rn.length > 7 ? room.rn.substring(0, 6) + '.' : room.rn)
+            : '';
+
+          const flags = [];
+          if (isFilled && room.admit) flags.push('#22c55e');
+          if (isFilled && room.chemo) flags.push('#ef4444');
+          if (isFilled && room.imc)   flags.push('#8b5cf6');
+
           return (
-            <g key={room.room} transform={`translate(${x}, ${y}) rotate(${rotation})`} className="pointer-events-none">
-              <rect x={-width/2} y={-height/2} width={width} height={height} rx="4" className={`transition-colors duration-200 ${isHovered ? 'fill-purple-100 stroke-purple-600 stroke-[3px]' : 'fill-white stroke-slate-300 stroke-2'}`} />
-              <text x="0" y="-3" textAnchor="middle" className="text-[16px] font-bold fill-slate-700">{room.room}</text>
-              <text x="0" y="14" textAnchor="middle" className="text-[12px] fill-slate-600 font-medium truncate">{hasRn ? (room.rn.length > 6 ? room.rn.substring(0, 5) + '..' : room.rn) : ''}</text>
-              <g transform={`translate(${-width/2 + 6}, ${-height/2 + 10})`}>
-                {(() => {
-                  const items = [];
-                  if (room.admit) items.push({ text: 'a', color: 'fill-green-600' });
-                  if (room.chemo) items.push({ text: 'c', color: 'fill-rose-600' });
-                  if (room.imc) items.push({ text: 'i', color: 'fill-purple-600' });
-                  return items.map((item, i) => <text key={i} x={i * 8} y="0" className={`text-[12px] font-bold ${item.color}`}>{item.text}</text>);
-                })()}
-              </g>
-              <g transform={`translate(${width/2 - 12}, ${height/2 - 10})`}>{room.locked && <Lock size={10} className="text-purple-600" />}</g>
-              {Number(room.acuity) > 0 && <text x={width/2 - 8} y={-height/2 + 10} textAnchor="middle" className="text-[12px] font-bold fill-slate-500">{room.acuity}</text>}
+            <g
+              key={room.room}
+              transform={`translate(${x}, ${y})`}
+              opacity={isDimmed ? 0.3 : 1}
+              style={{ filter: isFilled && !isDimmed ? 'url(#room-shadow)' : 'none', transition: 'opacity 0.18s' }}
+            >
+              <rect
+                x={-width / 2} y={-height / 2}
+                width={width} height={height}
+                rx="5" ry="5"
+                fill={fillColor} stroke={strokeColor} strokeWidth={strokeWidth}
+                style={{ transition: 'fill 0.15s, stroke 0.15s' }}
+              />
+
+              {/* Room number */}
+              <text
+                x="0" y={displayName ? '-3' : '5'}
+                textAnchor="middle"
+                fontSize={room.room === 'H' ? '13' : '11'}
+                fontWeight="700"
+                fontFamily="system-ui, -apple-system, sans-serif"
+                fill={textColor}
+              >{room.room}</text>
+
+              {/* RN name */}
+              {displayName && (
+                <text x="0" y="9" textAnchor="middle" fontSize="8" fontWeight="600"
+                  fontFamily="system-ui, -apple-system, sans-serif" fill={textColor} opacity="0.85"
+                >{displayName}</text>
+              )}
+
+              {/* Acuity badge — top-right */}
+              {isFilled && acuity > 0 && (
+                <g transform={`translate(${width / 2 - 8}, ${-height / 2 + 8})`}>
+                  <circle r="7" fill={ACUITY_COLOR[acuity] || '#94a3b8'} />
+                  <text x="0" y="3.5" textAnchor="middle" fontSize="7.5" fontWeight="800"
+                    fontFamily="system-ui, -apple-system, sans-serif" fill="white"
+                  >{acuity}</text>
+                </g>
+              )}
+
+              {/* Flag dots — bottom-left */}
+              {flags.length > 0 && (
+                <g transform={`translate(${-width / 2 + 5}, ${height / 2 - 7})`}>
+                  {flags.map((color, i) => <circle key={i} cx={i * 9} cy="0" r="3.5" fill={color} />)}
+                </g>
+              )}
+
+              {/* Lock dot — bottom-right */}
+              {room.locked && (
+                <circle cx={width / 2 - 6} cy={height / 2 - 6} r="3.5" fill="#7c3aed" opacity="0.7" />
+              )}
             </g>
           );
         })}
+
+        {/* Legend */}
+        <g transform="translate(20, 560)" fontFamily="system-ui, -apple-system, sans-serif">
+          <circle cx="5"   cy="0" r="4" fill="#22c55e" /><text x="13"  y="4" fontSize="11" fill="#64748b">Admit</text>
+          <circle cx="57"  cy="0" r="4" fill="#ef4444" /><text x="65"  y="4" fontSize="11" fill="#64748b">Chemo</text>
+          <circle cx="115" cy="0" r="4" fill="#8b5cf6" /><text x="123" y="4" fontSize="11" fill="#64748b">IMC</text>
+          <circle cx="155" cy="0" r="4" fill="#f59e0b" /><text x="163" y="4" fontSize="11" fill="#64748b">Acuity 3</text>
+          <circle cx="218" cy="0" r="4" fill="#ef4444" /><text x="226" y="4" fontSize="11" fill="#64748b">Acuity 4</text>
+        </g>
       </svg>
     </div>
   );
@@ -135,6 +229,7 @@ export default function App() {
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [newNurseName, setNewNurseName] = useState('');
   const [isClearingAssignments, setIsClearingAssignments] = useState(false);
   const [hoveredNurse, setHoveredNurse] = useState(null);
 
@@ -456,7 +551,18 @@ export default function App() {
     }
   };
 
-  const addNurse = () => setNurses([...nurses, { id: Date.now(), noChemo: false, name: `RN ${nurses.length + 1}`, locked: false }]);
+  const addNurse = () => {
+    const name = newNurseName.trim();
+    if (!name) return;
+    setNurses([...nurses, { id: Date.now(), noChemo: false, name, locked: false }]);
+    setNewNurseName('');
+  };
+
+  const deleteNurse = (index) => {
+    const nurse = nurses[index];
+    setRooms(rooms.map(room => room.rn === nurse.name ? { ...room, rn: '-' } : room));
+    setNurses(nurses.filter((_, i) => i !== index));
+  };
 
   const toggleNurseLock = (index) => {
     const newNurses = [...nurses];
@@ -591,7 +697,6 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <button onClick={autoAssign} className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm" title="Auto-Assign Patients"><Wand2 size={14} />Auto</button>
                 <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
-                <button onClick={addNurse} className="text-blue-600 hover:text-blue-800 p-1" title="Add Nurse"><Plus size={18} /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -603,6 +708,7 @@ export default function App() {
                     <th className="px-3 py-2">RN Name</th>
                     <th className="px-3 py-2">Assigned Rooms</th>
                     <th className="px-3 py-2 text-center">Total Acuity</th>
+                    <th className="px-2 py-2 w-8"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -686,9 +792,24 @@ export default function App() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center font-semibold"><span className={`inline-block px-2 py-1 rounded-md min-w-[2rem] ${acuityClass} ${hasCriticalWarning || hasSoftWarning ? 'cursor-help' : ''}`} title={hasCriticalWarning || hasSoftWarning ? tooltipMsgs.filter(m => m !== "Assignment Locked").join('\n') : undefined}>{stats.acuity}</span></td>
+                        <td className="px-2 py-1 text-center">
+                          <button onClick={() => deleteNurse(index)} className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Remove Nurse"><X size={14} /></button>
+                        </td>
                       </tr>
                     );
                   })}
+                  <tr className="border-t border-slate-200 bg-slate-50">
+                    <td colSpan={6} className="px-3 py-2">
+                      <input
+                        type="text"
+                        className="w-full bg-transparent text-sm placeholder-slate-400 focus:outline-none"
+                        placeholder="+ Add a nurse..."
+                        value={newNurseName}
+                        onChange={(e) => setNewNurseName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addNurse()}
+                      />
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -698,7 +819,7 @@ export default function App() {
         <div className="w-full md:w-1/2 xl:w-7/12 flex flex-col gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-slate-100 px-4 py-3 border-b border-slate-200"><h2 className="font-semibold text-slate-800 flex items-center gap-2"><MapIcon size={18} className="text-blue-600" />Unit Map</h2></div>
-            <UnitMap rooms={rooms} hoveredNurse={hoveredNurse} />
+            <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} />
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">

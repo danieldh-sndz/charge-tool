@@ -830,7 +830,7 @@ export default function App() {
                 <button onClick={clearRooms} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isClearing ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300'}`}>{isClearing ? <AlertTriangle size={14} /> : <Eraser size={14} />}{isClearing ? "Confirm" : "Reset to Defaults"}</button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[600px]">
               <table className="w-full text-sm text-left relative">
                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                   <tr>

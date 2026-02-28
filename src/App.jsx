@@ -791,6 +791,9 @@ export default function App() {
           </div>
         </div>
       </div>
+      <footer className="mt-6 text-center text-xs text-slate-400">
+        v{__BUILD_DATE__} &middot; {__COMMIT_HASH__}
+      </footer>
       <Analytics />
     </div>
   );

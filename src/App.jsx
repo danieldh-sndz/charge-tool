@@ -841,7 +841,6 @@ export default function App() {
                     <th className="px-3 py-3 w-16 text-center">IMC</th>
                     <th className="px-2 py-3 w-16 text-center">Admit</th>
                     <th className="px-3 py-3 w-16 text-center">Chemo</th>
-                    <th className="px-3 py-3 w-16 text-center">Not Indep</th>
                     <th className="px-3 py-3 w-16 text-center">CNA</th>
                     <th className="px-3 py-3 w-32">Assigned RN</th>
                     <th className="px-2 py-3 w-10 text-center">Lock</th>
@@ -856,7 +855,6 @@ export default function App() {
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer" checked={room.notIndep || false} onChange={(e) => updateRoom(index, 'notIndep', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
                       <td className="px-2 py-1">
                         <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>

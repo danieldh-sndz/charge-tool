@@ -61,22 +61,39 @@ const shuffleArray = (array) => {
   return newArr;
 };
 
-// Room geometry for L-shaped floor plan:
-//   Main vertical corridor (center x=250): rooms 7-14 on right, 15-23 on left
-//   Horizontal corridor (center y=480): rooms 24-30 above, 1-6 below
+// Room geometry for bent-corridor floor plan:
+//   Vertical corridor (center x=300): Room H at top, rooms 7-14 on right, 15-23 on left
+//   Corridor bends ~30° at bottom: rooms 1-6 (right side) and 24-30 (left side) angled
 const getRoomCoordinates = (roomNum) => {
-  const W = 68, H = 38;
-  if (roomNum === 'H') return { x: 250, y: 22, width: W, height: H };
+  if (roomNum === 'H') return { x: 300, y: 30, rotation: 0, width: 70, height: 40 };
   const num = parseInt(roomNum, 10);
-  // Right of main corridor: 14 at top → 7 at bottom
-  if (num >= 7 && num <= 14)  return { x: 326, y: 70 + (14 - num) * 44, width: W, height: H };
-  // Left of main corridor: 15 at top → 23 at bottom
-  if (num >= 15 && num <= 23) return { x: 174, y: 70 + (num - 15) * 44, width: W, height: H };
-  // Above horizontal corridor: 24 at left → 30 at right
-  if (num >= 24 && num <= 30) return { x: 326 + (num - 24) * 50, y: 426, width: W, height: H };
-  // Below horizontal corridor: 1 at left → 6 at right
-  if (num >= 1 && num <= 6)   return { x: 326 + (num - 1)  * 50, y: 534, width: W, height: H };
-  return { x: 0, y: 0, width: W, height: H };
+  const rightWallX = 360, leftWallX = 240, startY = 80, gapY = 50;
+
+  // Right of corridor: 14 at top → 7 at bottom
+  if (num >= 7 && num <= 14) {
+    const idx = 14 - num;
+    return { x: rightWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
+  }
+
+  // Right side angled ~30° bend: 6 at top → 1 at bottom-right
+  if (num >= 1 && num <= 6) {
+    const idx = 6 - num;
+    return { x: rightWallX + (idx * 25), y: 495 + (idx * 43), rotation: -30, width: 70, height: 40 };
+  }
+
+  // Left of corridor: 15 at top → 23 at bottom
+  if (num >= 15 && num <= 23) {
+    const idx = num - 15;
+    return { x: leftWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
+  }
+
+  // Left side angled ~30° bend: 24 at top → 30 at bottom-right
+  if (num >= 24 && num <= 30) {
+    const idx = num - 24;
+    return { x: leftWallX + (idx * 25), y: 545 + (idx * 43), rotation: -30, width: 70, height: 40 };
+  }
+
+  return { x: 0, y: 0, rotation: 0, width: 70, height: 40 };
 };
 
 const NURSE_COLORS = [
@@ -104,30 +121,18 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 
   return (
     <div className="bg-slate-100 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
-      {/*
-        Corridor geometry (all coordinates in viewBox units):
-          Main corridor  — vertical,   x 212–288,  y 42–459
-          Cross corridor — horizontal, x 212–668,  y 449–511
-          Junction area  — where they meet (x 212–288, y 449–511) covered by both paths
-      */}
-      <svg width="100%" height="530" viewBox="0 0 678 590" preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height="550" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid meet">
         <defs>
           <filter id="room-shadow" x="-25%" y="-25%" width="150%" height="150%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#00000012" />
           </filter>
         </defs>
 
-        {/* Corridor walls (outer shell — L-shape) */}
-        <path d="M 212,42 H 288 V 449 H 668 V 511 H 212 Z" fill="#cbd5e1" />
-        {/* Corridor floor (inner floor — L-shape, inset 8px) */}
-        <path d="M 220,50 H 280 V 457 H 660 V 503 H 220 Z" fill="#f1f5f9" />
-
-        {/* Centre-line dashes */}
-        <line x1="250" y1="52" x2="250" y2="455" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
-        <line x1="222" y1="480" x2="658" y2="480" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
+        {/* Corridor — bent path with ~30° angle at bottom */}
+        <path d="M 300,50 L 300,450 L 500,800" stroke="#e2e8f0" strokeWidth="100" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 
         {rooms.map((room) => {
-          const { x, y, width, height } = getRoomCoordinates(room.room);
+          const { x, y, rotation, width, height } = getRoomCoordinates(room.room);
           const hasRn  = room.rn && room.rn !== '-';
           const isFilled     = room.tx && room.tx.trim() !== '';
           const isHighlighted = hoveredNurse && room.rn === hoveredNurse;
@@ -155,7 +160,7 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
           return (
             <g
               key={room.room}
-              transform={`translate(${x}, ${y})`}
+              transform={`translate(${x}, ${y}) rotate(${rotation})`}
               opacity={isDimmed ? 0.3 : 1}
               style={{ filter: isFilled && !isDimmed ? 'url(#room-shadow)' : 'none', transition: 'opacity 0.18s' }}
             >
@@ -210,7 +215,7 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
         })}
 
         {/* Legend */}
-        <g transform="translate(20, 560)" fontFamily="system-ui, -apple-system, sans-serif">
+        <g transform="translate(20, 870)" fontFamily="system-ui, -apple-system, sans-serif">
           <circle cx="5"   cy="0" r="4" fill="#22c55e" /><text x="13"  y="4" fontSize="11" fill="#64748b">Admit</text>
           <circle cx="57"  cy="0" r="4" fill="#ef4444" /><text x="65"  y="4" fontSize="11" fill="#64748b">Chemo</text>
           <circle cx="115" cy="0" r="4" fill="#8b5cf6" /><text x="123" y="4" fontSize="11" fill="#64748b">IMC</text>

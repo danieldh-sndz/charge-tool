@@ -61,22 +61,39 @@ const shuffleArray = (array) => {
   return newArr;
 };
 
-// Room geometry for L-shaped floor plan:
-//   Main vertical corridor (center x=250): rooms 7-14 on right, 15-23 on left
-//   Horizontal corridor (center y=480): rooms 24-30 above, 1-6 below
+// Room geometry for bent-corridor floor plan:
+//   Vertical corridor (center x=300): Room H at top, rooms 7-14 on right, 15-23 on left
+//   Corridor bends ~30° at bottom: rooms 1-6 (right side) and 24-30 (left side) angled
 const getRoomCoordinates = (roomNum) => {
-  const W = 68, H = 38;
-  if (roomNum === 'H') return { x: 250, y: 22, width: W, height: H };
+  if (roomNum === 'H') return { x: 300, y: 30, rotation: 0, width: 70, height: 40 };
   const num = parseInt(roomNum, 10);
-  // Right of main corridor: 14 at top → 7 at bottom
-  if (num >= 7 && num <= 14)  return { x: 326, y: 70 + (14 - num) * 44, width: W, height: H };
-  // Left of main corridor: 15 at top → 23 at bottom
-  if (num >= 15 && num <= 23) return { x: 174, y: 70 + (num - 15) * 44, width: W, height: H };
-  // Above horizontal corridor: 24 at left → 30 at right
-  if (num >= 24 && num <= 30) return { x: 326 + (num - 24) * 50, y: 426, width: W, height: H };
-  // Below horizontal corridor: 1 at left → 6 at right
-  if (num >= 1 && num <= 6)   return { x: 326 + (num - 1)  * 50, y: 534, width: W, height: H };
-  return { x: 0, y: 0, width: W, height: H };
+  const rightWallX = 360, leftWallX = 240, startY = 80, gapY = 50;
+
+  // Right of corridor: 14 at top → 7 at bottom
+  if (num >= 7 && num <= 14) {
+    const idx = 14 - num;
+    return { x: rightWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
+  }
+
+  // Right side angled ~30° bend: 6 at top → 1 at bottom-right
+  if (num >= 1 && num <= 6) {
+    const idx = 6 - num;
+    return { x: rightWallX + 20 + (idx * 25), y: 495 + (idx * 43), rotation: -30, width: 70, height: 40 };
+  }
+
+  // Left of corridor: 15 at top → 23 at bottom
+  if (num >= 15 && num <= 23) {
+    const idx = num - 15;
+    return { x: leftWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
+  }
+
+  // Left side angled ~30° bend: 24 at top → 30 at bottom-right
+  if (num >= 24 && num <= 30) {
+    const idx = num - 24;
+    return { x: leftWallX + 20 + (idx * 25), y: 545 + (idx * 43), rotation: -30, width: 70, height: 40 };
+  }
+
+  return { x: 0, y: 0, rotation: 0, width: 70, height: 40 };
 };
 
 const NURSE_COLORS = [
@@ -104,30 +121,18 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 
   return (
     <div className="bg-slate-100 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
-      {/*
-        Corridor geometry (all coordinates in viewBox units):
-          Main corridor  — vertical,   x 212–288,  y 42–459
-          Cross corridor — horizontal, x 212–668,  y 449–511
-          Junction area  — where they meet (x 212–288, y 449–511) covered by both paths
-      */}
-      <svg width="100%" height="530" viewBox="0 0 678 590" preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height="550" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid meet">
         <defs>
           <filter id="room-shadow" x="-25%" y="-25%" width="150%" height="150%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#00000012" />
           </filter>
         </defs>
 
-        {/* Corridor walls (outer shell — L-shape) */}
-        <path d="M 212,42 H 288 V 449 H 668 V 511 H 212 Z" fill="#cbd5e1" />
-        {/* Corridor floor (inner floor — L-shape, inset 8px) */}
-        <path d="M 220,50 H 280 V 457 H 660 V 503 H 220 Z" fill="#f1f5f9" />
-
-        {/* Centre-line dashes */}
-        <line x1="250" y1="52" x2="250" y2="455" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
-        <line x1="222" y1="480" x2="658" y2="480" stroke="#dde3ec" strokeWidth="1.5" strokeDasharray="10,8" />
+        {/* Corridor — bent path with ~30° angle at bottom */}
+        <path d="M 300,50 L 300,450 L 500,800" stroke="#e2e8f0" strokeWidth="100" fill="none" strokeLinecap="round" strokeLinejoin="round" />
 
         {rooms.map((room) => {
-          const { x, y, width, height } = getRoomCoordinates(room.room);
+          const { x, y, rotation, width, height } = getRoomCoordinates(room.room);
           const hasRn  = room.rn && room.rn !== '-';
           const isFilled     = room.tx && room.tx.trim() !== '';
           const isHighlighted = hoveredNurse && room.rn === hoveredNurse;
@@ -148,14 +153,14 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
             : '';
 
           const flags = [];
-          if (isFilled && room.admit) flags.push('#22c55e');
-          if (isFilled && room.chemo) flags.push('#ef4444');
-          if (isFilled && room.imc)   flags.push('#8b5cf6');
+          if (isFilled && room.admit) flags.push({ label: 'A', color: '#16a34a' });
+          if (isFilled && room.chemo) flags.push({ label: 'C', color: '#dc2626' });
+          if (isFilled && room.imc)   flags.push({ label: 'I', color: '#7c3aed' });
 
           return (
             <g
               key={room.room}
-              transform={`translate(${x}, ${y})`}
+              transform={`translate(${x}, ${y}) rotate(${rotation})`}
               opacity={isDimmed ? 0.3 : 1}
               style={{ filter: isFilled && !isDimmed ? 'url(#room-shadow)' : 'none', transition: 'opacity 0.18s' }}
             >
@@ -167,11 +172,22 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
                 style={{ transition: 'fill 0.15s, stroke 0.15s' }}
               />
 
+              {/* Flag letters — top-left */}
+              {flags.length > 0 && (
+                <g transform={`translate(${-width / 2 + 4}, ${-height / 2 + 11})`}>
+                  {flags.map((f, i) => (
+                    <text key={i} x={i * 11} y="0" fontSize="10" fontWeight="800"
+                      fontFamily="system-ui, -apple-system, sans-serif" fill={f.color}
+                    >{f.label}</text>
+                  ))}
+                </g>
+              )}
+
               {/* Room number */}
               <text
                 x="0" y={displayName ? '-3' : '5'}
                 textAnchor="middle"
-                fontSize={room.room === 'H' ? '13' : '11'}
+                fontSize={room.room === 'H' ? '16' : '14'}
                 fontWeight="700"
                 fontFamily="system-ui, -apple-system, sans-serif"
                 fill={textColor}
@@ -179,25 +195,18 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 
               {/* RN name */}
               {displayName && (
-                <text x="0" y="9" textAnchor="middle" fontSize="8" fontWeight="600"
+                <text x="0" y="11" textAnchor="middle" fontSize="10" fontWeight="600"
                   fontFamily="system-ui, -apple-system, sans-serif" fill={textColor} opacity="0.85"
                 >{displayName}</text>
               )}
 
               {/* Acuity badge — top-right */}
               {isFilled && acuity > 0 && (
-                <g transform={`translate(${width / 2 - 8}, ${-height / 2 + 8})`}>
-                  <circle r="7" fill={ACUITY_COLOR[acuity] || '#94a3b8'} />
-                  <text x="0" y="3.5" textAnchor="middle" fontSize="7.5" fontWeight="800"
+                <g transform={`translate(${width / 2 - 9}, ${-height / 2 + 9})`}>
+                  <circle r="8" fill={ACUITY_COLOR[acuity] || '#94a3b8'} />
+                  <text x="0" y="3.5" textAnchor="middle" fontSize="9" fontWeight="800"
                     fontFamily="system-ui, -apple-system, sans-serif" fill="white"
                   >{acuity}</text>
-                </g>
-              )}
-
-              {/* Flag dots — bottom-left */}
-              {flags.length > 0 && (
-                <g transform={`translate(${-width / 2 + 5}, ${height / 2 - 7})`}>
-                  {flags.map((color, i) => <circle key={i} cx={i * 9} cy="0" r="3.5" fill={color} />)}
                 </g>
               )}
 
@@ -209,14 +218,6 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
           );
         })}
 
-        {/* Legend */}
-        <g transform="translate(20, 560)" fontFamily="system-ui, -apple-system, sans-serif">
-          <circle cx="5"   cy="0" r="4" fill="#22c55e" /><text x="13"  y="4" fontSize="11" fill="#64748b">Admit</text>
-          <circle cx="57"  cy="0" r="4" fill="#ef4444" /><text x="65"  y="4" fontSize="11" fill="#64748b">Chemo</text>
-          <circle cx="115" cy="0" r="4" fill="#8b5cf6" /><text x="123" y="4" fontSize="11" fill="#64748b">IMC</text>
-          <circle cx="155" cy="0" r="4" fill="#f59e0b" /><text x="163" y="4" fontSize="11" fill="#64748b">Acuity 3</text>
-          <circle cx="218" cy="0" r="4" fill="#ef4444" /><text x="226" y="4" fontSize="11" fill="#64748b">Acuity 4</text>
-        </g>
       </svg>
     </div>
   );
@@ -830,7 +831,7 @@ export default function App() {
                 <button onClick={clearRooms} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isClearing ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300'}`}>{isClearing ? <AlertTriangle size={14} /> : <Eraser size={14} />}{isClearing ? "Confirm" : "Reset to Defaults"}</button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            <div>
               <table className="w-full text-sm text-left relative">
                 <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                   <tr>
@@ -840,7 +841,6 @@ export default function App() {
                     <th className="px-3 py-3 w-16 text-center">IMC</th>
                     <th className="px-2 py-3 w-16 text-center">Admit</th>
                     <th className="px-3 py-3 w-16 text-center">Chemo</th>
-                    <th className="px-3 py-3 w-16 text-center">Not Indep</th>
                     <th className="px-3 py-3 w-16 text-center">CNA</th>
                     <th className="px-3 py-3 w-32">Assigned RN</th>
                     <th className="px-2 py-3 w-10 text-center">Lock</th>
@@ -855,7 +855,6 @@ export default function App() {
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer" checked={room.notIndep || false} onChange={(e) => updateRoom(index, 'notIndep', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
                       <td className="px-2 py-1">
                         <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>

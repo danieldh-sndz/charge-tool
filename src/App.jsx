@@ -48,6 +48,21 @@ const generateInitialRooms = () => {
 
 const initialRooms = generateInitialRooms();
 
+const loadState = (key, fallback) => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const saveState = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch { /* ignore quota errors */ }
+};
+
 // Remix default diagnoses
 const mockDiagnoses = ['Chemo', 'Auto', 'Allo', 'CART'];
 
@@ -224,8 +239,8 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 }
 
 export default function App() {
-  const [nurses, setNurses] = useState(initialNurses);
-  const [rooms, setRooms] = useState(initialRooms);
+  const [nurses, setNurses] = useState(() => loadState('nurses', initialNurses));
+  const [rooms, setRooms] = useState(() => loadState('rooms', initialRooms));
   const [localInputs, setLocalInputs] = useState({});
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
@@ -244,6 +259,9 @@ export default function App() {
       clearTimeout(clearingAssignmentsTimerRef.current);
     };
   }, []);
+
+  useEffect(() => { saveState('nurses', nurses); }, [nurses]);
+  useEffect(() => { saveState('rooms', rooms); }, [rooms]);
 
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);

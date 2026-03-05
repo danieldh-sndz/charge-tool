@@ -78,7 +78,7 @@ const getRoomCoordinates = (roomNum) => {
   // Right side angled ~30° bend: 6 at top → 1 at bottom-right
   if (num >= 1 && num <= 6) {
     const idx = 6 - num;
-    return { x: rightWallX + (idx * 25), y: 495 + (idx * 43), rotation: -30, width: 70, height: 40 };
+    return { x: rightWallX + 20 + (idx * 25), y: 495 + (idx * 43), rotation: -30, width: 70, height: 40 };
   }
 
   // Left of corridor: 15 at top → 23 at bottom
@@ -90,7 +90,7 @@ const getRoomCoordinates = (roomNum) => {
   // Left side angled ~30° bend: 24 at top → 30 at bottom-right
   if (num >= 24 && num <= 30) {
     const idx = num - 24;
-    return { x: leftWallX + (idx * 25), y: 545 + (idx * 43), rotation: -30, width: 70, height: 40 };
+    return { x: leftWallX + 20 + (idx * 25), y: 545 + (idx * 43), rotation: -30, width: 70, height: 40 };
   }
 
   return { x: 0, y: 0, rotation: 0, width: 70, height: 40 };

@@ -153,9 +153,9 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
             : '';
 
           const flags = [];
-          if (isFilled && room.admit) flags.push('#22c55e');
-          if (isFilled && room.chemo) flags.push('#ef4444');
-          if (isFilled && room.imc)   flags.push('#8b5cf6');
+          if (isFilled && room.admit) flags.push({ label: 'A', color: '#16a34a' });
+          if (isFilled && room.chemo) flags.push({ label: 'C', color: '#dc2626' });
+          if (isFilled && room.imc)   flags.push({ label: 'I', color: '#7c3aed' });
 
           return (
             <g
@@ -172,11 +172,22 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
                 style={{ transition: 'fill 0.15s, stroke 0.15s' }}
               />
 
+              {/* Flag letters — top-left */}
+              {flags.length > 0 && (
+                <g transform={`translate(${-width / 2 + 4}, ${-height / 2 + 11})`}>
+                  {flags.map((f, i) => (
+                    <text key={i} x={i * 11} y="0" fontSize="10" fontWeight="800"
+                      fontFamily="system-ui, -apple-system, sans-serif" fill={f.color}
+                    >{f.label}</text>
+                  ))}
+                </g>
+              )}
+
               {/* Room number */}
               <text
                 x="0" y={displayName ? '-3' : '5'}
                 textAnchor="middle"
-                fontSize={room.room === 'H' ? '13' : '11'}
+                fontSize={room.room === 'H' ? '16' : '14'}
                 fontWeight="700"
                 fontFamily="system-ui, -apple-system, sans-serif"
                 fill={textColor}
@@ -184,25 +195,18 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 
               {/* RN name */}
               {displayName && (
-                <text x="0" y="9" textAnchor="middle" fontSize="8" fontWeight="600"
+                <text x="0" y="11" textAnchor="middle" fontSize="10" fontWeight="600"
                   fontFamily="system-ui, -apple-system, sans-serif" fill={textColor} opacity="0.85"
                 >{displayName}</text>
               )}
 
               {/* Acuity badge — top-right */}
               {isFilled && acuity > 0 && (
-                <g transform={`translate(${width / 2 - 8}, ${-height / 2 + 8})`}>
-                  <circle r="7" fill={ACUITY_COLOR[acuity] || '#94a3b8'} />
-                  <text x="0" y="3.5" textAnchor="middle" fontSize="7.5" fontWeight="800"
+                <g transform={`translate(${width / 2 - 9}, ${-height / 2 + 9})`}>
+                  <circle r="8" fill={ACUITY_COLOR[acuity] || '#94a3b8'} />
+                  <text x="0" y="3.5" textAnchor="middle" fontSize="9" fontWeight="800"
                     fontFamily="system-ui, -apple-system, sans-serif" fill="white"
                   >{acuity}</text>
-                </g>
-              )}
-
-              {/* Flag dots — bottom-left */}
-              {flags.length > 0 && (
-                <g transform={`translate(${-width / 2 + 5}, ${height / 2 - 7})`}>
-                  {flags.map((color, i) => <circle key={i} cx={i * 9} cy="0" r="3.5" fill={color} />)}
                 </g>
               )}
 
@@ -214,14 +218,6 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
           );
         })}
 
-        {/* Legend */}
-        <g transform="translate(20, 870)" fontFamily="system-ui, -apple-system, sans-serif">
-          <circle cx="5"   cy="0" r="4" fill="#22c55e" /><text x="13"  y="4" fontSize="11" fill="#64748b">Admit</text>
-          <circle cx="57"  cy="0" r="4" fill="#ef4444" /><text x="65"  y="4" fontSize="11" fill="#64748b">Chemo</text>
-          <circle cx="115" cy="0" r="4" fill="#8b5cf6" /><text x="123" y="4" fontSize="11" fill="#64748b">IMC</text>
-          <circle cx="155" cy="0" r="4" fill="#f59e0b" /><text x="163" y="4" fontSize="11" fill="#64748b">Acuity 3</text>
-          <circle cx="218" cy="0" r="4" fill="#ef4444" /><text x="226" y="4" fontSize="11" fill="#64748b">Acuity 4</text>
-        </g>
       </svg>
     </div>
   );

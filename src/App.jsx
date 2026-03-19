@@ -61,6 +61,9 @@ const shuffleArray = (array) => {
   return newArr;
 };
 
+// Wing helper: rooms 17-32 = North Wing, rooms 1-16 = South Wing
+const getRoomWing = (roomNum) => parseInt(roomNum, 10) >= 17 ? 'north' : 'south';
+
 // Room geometry for straight double-corridor floor plan:
 //   Four columns: far-left (24-32), left-center (23-17), right-center (10-16), far-right (9-1)
 //   Central divider separates left and right halves
@@ -271,7 +274,7 @@ export default function App() {
     const stats = {};
     nurses.forEach(nurse => {
       if (nurse.name) {
-        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0 };
+        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
       }
     });
 
@@ -292,6 +295,7 @@ export default function App() {
         if (room.imc) stats[room.rn].imcs += 1;
         if (room.admit) stats[room.rn].admits += 1;
         if (Number(room.acuity) === 4) stats[room.rn].acuity4Count += 1;
+        stats[room.rn].wings.add(getRoomWing(room.room));
       }
     });
     return stats;
@@ -424,7 +428,8 @@ export default function App() {
       nurseLoads[n.name] = {
         name: n.name, acuity: 0, patients: 0, admits: 0, imcs: 0,
         acuity4Count: 0, hasAcuityGreaterThan2: false,
-        isChemoCert: !n.noChemo, isLocked: n.locked
+        isChemoCert: !n.noChemo, isLocked: n.locked,
+        wings: new Set()
       };
     });
 
@@ -448,6 +453,7 @@ export default function App() {
         if (room.imc) n.imcs += 1;
         if (roomAcuity > 2) n.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) n.acuity4Count += 1;
+        n.wings.add(getRoomWing(room.room));
         lockedCount++;
       }
     });
@@ -469,17 +475,20 @@ export default function App() {
     let unassignedRooms = [];
     let placedChemo = 0, placedAdmits = 0, placedAcuity4 = 0;
 
-    const getNurseLoadScore = (nurse, roomAcuity, isAdmit) => {
+    const getNurseLoadScore = (nurse, roomAcuity, isAdmit, roomWing) => {
       let score = (nurse.patients * 3.5) + nurse.acuity;
       if (nurse.acuity + roomAcuity >= 10) score += 100;
       if ((nurse.acuity4Count > 0 && isAdmit) || (nurse.admits > 0 && roomAcuity === 4)) score += 50;
       if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
       if (nurse.patients === 3 && (roomAcuity > 2 || nurse.hasAcuityGreaterThan2)) score += 20;
+      // Soft: prefer keeping nurses in one wing
+      if (nurse.wings.size > 0 && !nurse.wings.has(roomWing)) score += 15;
       return score;
     };
 
     activeRooms.forEach(room => {
       const roomAcuity = Number(room.acuity || 0);
+      const roomWing = getRoomWing(room.room);
       const isAdmit = room.admit, isChemo = room.chemo, isImc = room.imc;
       let eligible = Object.values(nurseLoads).filter(n => {
         if (n.isLocked || n.patients >= 4) return false;
@@ -492,7 +501,7 @@ export default function App() {
         return true;
       });
 
-      eligible.sort((a, b) => getNurseLoadScore(a, roomAcuity, isAdmit) - getNurseLoadScore(b, roomAcuity, isAdmit));
+      eligible.sort((a, b) => getNurseLoadScore(a, roomAcuity, isAdmit, roomWing) - getNurseLoadScore(b, roomAcuity, isAdmit, roomWing));
 
       if (eligible.length > 0) {
         const chosenNurse = eligible[0];
@@ -504,6 +513,7 @@ export default function App() {
         if (isChemo) placedChemo++;
         if (roomAcuity > 2) chosenNurse.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) { chosenNurse.acuity4Count += 1; placedAcuity4++; }
+        chosenNurse.wings.add(roomWing);
       } else {
         assignments[room.room] = '-';
         let traits = [];
@@ -721,7 +731,7 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {nurses.map((nurse, index) => {
-                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0 };
+                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
 
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
                     const patientCountWarning = stats.rooms.length > 4;
@@ -734,7 +744,8 @@ export default function App() {
                     const admitLoadWarning = stats.admits > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
                     const acuity4WithAdmitWarning = stats.acuity4Count > 0 && stats.admits > 0;
-                    const hasSoftWarning = (admitLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || stats.acuity >= 10) && !hasCriticalWarning;
+                    const crossWingWarning = stats.wings.size > 1;
+                    const hasSoftWarning = (admitLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || crossWingWarning || stats.acuity >= 10) && !hasCriticalWarning;
 
                     let tooltipMsgs = [];
                     if (nurse.locked) tooltipMsgs.push("Assignment Locked");
@@ -747,6 +758,7 @@ export default function App() {
                     if (admitLoadWarning) tooltipMsgs.push("Soft Limit: RN with an admit has 4 patients.");
                     if (highAcuityWithFour) tooltipMsgs.push("Soft Limit: RN has 4 patients, but not all are Acuity 2.");
                     if (acuity4WithAdmitWarning) tooltipMsgs.push("Soft Limit: Avoid combining Admit with Acuity 4.");
+                    if (crossWingWarning) tooltipMsgs.push("Soft Limit: RN has rooms in both wings.");
 
                     let rowClass = 'hover:bg-slate-50 transition-colors duration-150';
                     if (hasCriticalWarning) rowClass = 'bg-rose-50 hover:bg-rose-100';
@@ -903,6 +915,7 @@ export default function App() {
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Heavy Load Balancing:</strong> Avoid total acuity scores of 10+ and 4th patients on nurses with admissions.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity Distribution:</strong> If a nurse has 4 patients, the system attempts to ensure all patients are Acuity 2 or lower.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Priority Placement:</strong> Hard-to-place patients (Chemo, High Acuity, IMC) are assigned first.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Wing Locality:</strong> The algorithm prefers assigning rooms within the same wing (North or South) to each nurse.</span></li>
             </ul>
           </div>
         </div>

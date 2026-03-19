@@ -13,10 +13,11 @@ const initialNurses = [
   { id: 8, noChemo: false, name: 'RN 8', locked: false },
   { id: 9, noChemo: false, name: 'RN 9', locked: false },
   { id: 10, noChemo: false, name: 'RN 10', locked: false },
+  { id: 11, noChemo: false, name: 'RN 11', locked: false },
 ];
 
 const generateInitialRooms = () => {
-  const rooms = Array.from({ length: 30 }, (_, i) => ({
+  return Array.from({ length: 32 }, (_, i) => ({
     room: i + 1,
     tx: `Pt ${i + 1}`,
     acuity: 2,
@@ -28,22 +29,6 @@ const generateInitialRooms = () => {
     rn: '-',
     locked: false
   }));
-
-  // Add Room H (empty by default)
-  rooms.push({
-    room: 'H',
-    tx: '',
-    acuity: 2,
-    admit: false,
-    imc: false,
-    cna: false,
-    chemo: false,
-    notIndep: false,
-    rn: '-',
-    locked: false
-  });
-
-  return rooms;
 };
 
 const initialRooms = generateInitialRooms();
@@ -76,39 +61,41 @@ const shuffleArray = (array) => {
   return newArr;
 };
 
-// Room geometry for bent-corridor floor plan:
-//   Vertical corridor (center x=300): Room H at top, rooms 7-14 on right, 15-23 on left
-//   Corridor bends ~30° at bottom: rooms 1-6 (right side) and 24-30 (left side) angled
+// Wing helper: rooms 17-32 = North Wing, rooms 1-16 = South Wing
+const getRoomWing = (roomNum) => parseInt(roomNum, 10) >= 17 ? 'north' : 'south';
+
+// Room geometry for straight double-corridor floor plan:
+//   Four columns: far-left (24-32), left-center (23-17), right-center (10-16), far-right (9-1)
+//   Central divider separates left and right halves
 const getRoomCoordinates = (roomNum) => {
-  if (roomNum === 'H') return { x: 300, y: 30, rotation: 0, width: 70, height: 40 };
   const num = parseInt(roomNum, 10);
-  const rightWallX = 360, leftWallX = 240, startY = 80, gapY = 50;
+  const w = 70, h = 40, startY = 50, gapY = 55;
 
-  // Right of corridor: 14 at top → 7 at bottom
-  if (num >= 7 && num <= 14) {
-    const idx = 14 - num;
-    return { x: rightWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
-  }
-
-  // Right side angled ~30° bend: 6 at top → 1 at bottom-right
-  if (num >= 1 && num <= 6) {
-    const idx = 6 - num;
-    return { x: rightWallX + 20 + (idx * 25), y: 495 + (idx * 43), rotation: -30, width: 70, height: 40 };
-  }
-
-  // Left of corridor: 15 at top → 23 at bottom
-  if (num >= 15 && num <= 23) {
-    const idx = num - 15;
-    return { x: leftWallX, y: startY + idx * gapY, rotation: 0, width: 70, height: 40 };
-  }
-
-  // Left side angled ~30° bend: 24 at top → 30 at bottom-right
-  if (num >= 24 && num <= 30) {
+  // Far left column (outer wall): 24 at top → 32 at bottom (9 rooms)
+  if (num >= 24 && num <= 32) {
     const idx = num - 24;
-    return { x: leftWallX + 20 + (idx * 25), y: 545 + (idx * 43), rotation: -30, width: 70, height: 40 };
+    return { x: 80, y: startY + idx * gapY, rotation: 0, width: w, height: h };
   }
 
-  return { x: 0, y: 0, rotation: 0, width: 70, height: 40 };
+  // Left-center column (inner wall): 23 at top → 17 at bottom (7 rooms)
+  if (num >= 17 && num <= 23) {
+    const idx = 23 - num;
+    return { x: 220, y: startY + idx * gapY, rotation: 0, width: w, height: h };
+  }
+
+  // Right-center column (inner wall): 10 at top → 16 at bottom (7 rooms)
+  if (num >= 10 && num <= 16) {
+    const idx = num - 10;
+    return { x: 480, y: startY + idx * gapY, rotation: 0, width: w, height: h };
+  }
+
+  // Far right column (outer wall): 9 at top → 1 at bottom (9 rooms)
+  if (num >= 1 && num <= 9) {
+    const idx = 9 - num;
+    return { x: 620, y: startY + idx * gapY, rotation: 0, width: w, height: h };
+  }
+
+  return { x: 0, y: 0, rotation: 0, width: w, height: h };
 };
 
 const NURSE_COLORS = [
@@ -122,6 +109,7 @@ const NURSE_COLORS = [
   { fill: '#f0fdf4', stroke: '#15803d', text: '#14532d' },
   { fill: '#fdf4ff', stroke: '#c026d3', text: '#86198f' },
   { fill: '#fefce8', stroke: '#ca8a04', text: '#713f12' },
+  { fill: '#f0f9ff', stroke: '#0369a1', text: '#0c4a6e' },
 ];
 
 const ACUITY_COLOR = { 1: '#94a3b8', 2: '#94a3b8', 3: '#f59e0b', 4: '#ef4444' };
@@ -136,15 +124,16 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 
   return (
     <div className="bg-slate-100 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
-      <svg width="100%" height="550" viewBox="0 0 600 900" preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height="550" viewBox="0 0 700 560" preserveAspectRatio="xMidYMid meet">
         <defs>
           <filter id="room-shadow" x="-25%" y="-25%" width="150%" height="150%">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="#00000012" />
           </filter>
         </defs>
 
-        {/* Corridor — bent path with ~30° angle at bottom */}
-        <path d="M 300,50 L 300,450 L 500,800" stroke="#e2e8f0" strokeWidth="100" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Wing labels */}
+        <text x="150" y="18" textAnchor="middle" fontSize="11" fontWeight="700" fill="#94a3b8" fontFamily="system-ui, sans-serif">North Wing</text>
+        <text x="550" y="18" textAnchor="middle" fontSize="11" fontWeight="700" fill="#94a3b8" fontFamily="system-ui, sans-serif">South Wing</text>
 
         {rooms.map((room) => {
           const { x, y, rotation, width, height } = getRoomCoordinates(room.room);
@@ -202,7 +191,7 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
               <text
                 x="0" y={displayName ? '-3' : '5'}
                 textAnchor="middle"
-                fontSize={room.room === 'H' ? '16' : '14'}
+                fontSize="14"
                 fontWeight="700"
                 fontFamily="system-ui, -apple-system, sans-serif"
                 fill={textColor}
@@ -239,8 +228,16 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
 }
 
 export default function App() {
-  const [nurses, setNurses] = useState(() => loadState('nurses', initialNurses));
-  const [rooms, setRooms] = useState(() => loadState('rooms', initialRooms));
+  const [nurses, setNurses] = useState(() => {
+    const stored = loadState('nurses', null);
+    if (!stored || stored.length < 11) return initialNurses;
+    return stored;
+  });
+  const [rooms, setRooms] = useState(() => {
+    const stored = loadState('rooms', null);
+    if (!stored || stored.length !== 32 || stored.some(r => r.room === 'H')) return initialRooms;
+    return stored;
+  });
   const [localInputs, setLocalInputs] = useState({});
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
@@ -277,7 +274,7 @@ export default function App() {
     const stats = {};
     nurses.forEach(nurse => {
       if (nurse.name) {
-        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0 };
+        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
       }
     });
 
@@ -298,6 +295,7 @@ export default function App() {
         if (room.imc) stats[room.rn].imcs += 1;
         if (room.admit) stats[room.rn].admits += 1;
         if (Number(room.acuity) === 4) stats[room.rn].acuity4Count += 1;
+        stats[room.rn].wings.add(getRoomWing(room.room));
       }
     });
     return stats;
@@ -332,9 +330,6 @@ export default function App() {
 
     let nextRooms = rooms.map(room => {
       if (room.locked) return room;
-      const isRoomH = room.room === 'H';
-      const isFilled = isRoomH ? Math.random() > 0.5 : true;
-      if (!isFilled) return { ...room, tx: '', acuity: 0, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
       return { ...room, tx: mockDiagnoses[Math.floor(Math.random() * mockDiagnoses.length)], acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
     });
 
@@ -380,23 +375,21 @@ export default function App() {
       if (!isFilled) return room;                              // Bug fix: skip empty rooms
       const isAcuity4 = Number(room.acuity) === 4;
       const isAdmit = room.admit;
-      const isRoomH = room.room === 'H';
       const isNotIndep = room.notIndep;
-      if (isAcuity4 || isAdmit || isRoomH || isNotIndep) {
+      if (isAcuity4 || isAdmit || isNotIndep) {
         return { ...room, cna: true };
       }
       return room;
     });
     setRooms(newRooms);
-    setRationale("CNAs automatically assigned to all Acuity 4 patients, Admissions, Not Independent patients, and Room H (if occupied).");
+    setRationale("CNAs automatically assigned to all Acuity 4 patients, Admissions, and Not Independent patients.");
   };
 
   const clearRooms = () => {
     if (isClearing) {
       const newRooms = rooms.map(room => {
         if (room.locked) return room;
-        const defaultTx = room.room === 'H' ? '' : `Pt ${room.room}`;
-        return { ...room, tx: defaultTx, acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
+        return { ...room, tx: `Pt ${room.room}`, acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
       });
       setRooms(newRooms);
       setRationale("All unlocked rooms reset to default state (Pt #, Acuity 2).");
@@ -435,7 +428,8 @@ export default function App() {
       nurseLoads[n.name] = {
         name: n.name, acuity: 0, patients: 0, admits: 0, imcs: 0,
         acuity4Count: 0, hasAcuityGreaterThan2: false,
-        isChemoCert: !n.noChemo, isLocked: n.locked
+        isChemoCert: !n.noChemo, isLocked: n.locked,
+        wings: new Set()
       };
     });
 
@@ -459,6 +453,7 @@ export default function App() {
         if (room.imc) n.imcs += 1;
         if (roomAcuity > 2) n.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) n.acuity4Count += 1;
+        n.wings.add(getRoomWing(room.room));
         lockedCount++;
       }
     });
@@ -480,17 +475,20 @@ export default function App() {
     let unassignedRooms = [];
     let placedChemo = 0, placedAdmits = 0, placedAcuity4 = 0;
 
-    const getNurseLoadScore = (nurse, roomAcuity, isAdmit) => {
+    const getNurseLoadScore = (nurse, roomAcuity, isAdmit, roomWing) => {
       let score = (nurse.patients * 3.5) + nurse.acuity;
       if (nurse.acuity + roomAcuity >= 10) score += 100;
       if ((nurse.acuity4Count > 0 && isAdmit) || (nurse.admits > 0 && roomAcuity === 4)) score += 50;
       if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
       if (nurse.patients === 3 && (roomAcuity > 2 || nurse.hasAcuityGreaterThan2)) score += 20;
+      // Soft: prefer keeping nurses in one wing
+      if (nurse.patients < 3 && nurse.wings.size > 0 && !nurse.wings.has(roomWing)) score += 15;
       return score;
     };
 
     activeRooms.forEach(room => {
       const roomAcuity = Number(room.acuity || 0);
+      const roomWing = getRoomWing(room.room);
       const isAdmit = room.admit, isChemo = room.chemo, isImc = room.imc;
       let eligible = Object.values(nurseLoads).filter(n => {
         if (n.isLocked || n.patients >= 4) return false;
@@ -503,7 +501,7 @@ export default function App() {
         return true;
       });
 
-      eligible.sort((a, b) => getNurseLoadScore(a, roomAcuity, isAdmit) - getNurseLoadScore(b, roomAcuity, isAdmit));
+      eligible.sort((a, b) => getNurseLoadScore(a, roomAcuity, isAdmit, roomWing) - getNurseLoadScore(b, roomAcuity, isAdmit, roomWing));
 
       if (eligible.length > 0) {
         const chosenNurse = eligible[0];
@@ -515,6 +513,7 @@ export default function App() {
         if (isChemo) placedChemo++;
         if (roomAcuity > 2) chosenNurse.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) { chosenNurse.acuity4Count += 1; placedAcuity4++; }
+        chosenNurse.wings.add(roomWing);
       } else {
         assignments[room.room] = '-';
         let traits = [];
@@ -732,7 +731,7 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {nurses.map((nurse, index) => {
-                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0 };
+                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
 
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
                     const patientCountWarning = stats.rooms.length > 4;
@@ -745,7 +744,8 @@ export default function App() {
                     const admitLoadWarning = stats.admits > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
                     const acuity4WithAdmitWarning = stats.acuity4Count > 0 && stats.admits > 0;
-                    const hasSoftWarning = (admitLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || stats.acuity >= 10) && !hasCriticalWarning;
+                    const crossWingWarning = stats.wings.size > 1;
+                    const hasSoftWarning = (admitLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || crossWingWarning || stats.acuity >= 10) && !hasCriticalWarning;
 
                     let tooltipMsgs = [];
                     if (nurse.locked) tooltipMsgs.push("Assignment Locked");
@@ -758,6 +758,7 @@ export default function App() {
                     if (admitLoadWarning) tooltipMsgs.push("Soft Limit: RN with an admit has 4 patients.");
                     if (highAcuityWithFour) tooltipMsgs.push("Soft Limit: RN has 4 patients, but not all are Acuity 2.");
                     if (acuity4WithAdmitWarning) tooltipMsgs.push("Soft Limit: Avoid combining Admit with Acuity 4.");
+                    if (crossWingWarning) tooltipMsgs.push("Soft Limit: RN has rooms in both wings.");
 
                     let rowClass = 'hover:bg-slate-50 transition-colors duration-150';
                     if (hasCriticalWarning) rowClass = 'bg-rose-50 hover:bg-rose-100';
@@ -914,6 +915,7 @@ export default function App() {
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Heavy Load Balancing:</strong> Avoid total acuity scores of 10+ and 4th patients on nurses with admissions.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity Distribution:</strong> If a nurse has 4 patients, the system attempts to ensure all patients are Acuity 2 or lower.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Priority Placement:</strong> Hard-to-place patients (Chemo, High Acuity, IMC) are assigned first.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Wing Locality:</strong> The algorithm prefers assigning rooms within the same wing (North or South) to each nurse.</span></li>
             </ul>
           </div>
         </div>

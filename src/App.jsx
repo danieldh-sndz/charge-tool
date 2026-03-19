@@ -128,33 +128,9 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
           </filter>
         </defs>
 
-        {/* Left corridor */}
-        <rect x="130" y="25" width="110" height="520" rx="8" fill="#f1f5f9" stroke="#e2e8f0" strokeWidth="1" />
-        {/* Right corridor */}
-        <rect x="460" y="25" width="110" height="520" rx="8" fill="#f1f5f9" stroke="#e2e8f0" strokeWidth="1" />
-        {/* Central divider */}
-        <rect x="290" y="25" width="120" height="520" rx="4" fill="#e2e8f0" />
-
-        {/* Landmark labels */}
-        <text x="350" y="65" textAnchor="middle" fontSize="9" fontWeight="700" fill="#64748b" fontFamily="system-ui, sans-serif">Lead (Fl 4 &amp; 6)</text>
-
-        {/* Left side landmarks */}
-        <text x="150" y="138" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Nutrition Rm</text>
-        <text x="150" y="193" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">RN Station</text>
-        <text x="150" y="303" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Med Rm</text>
-        <text x="150" y="413" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">RN Station</text>
-
-        {/* Right side landmarks */}
-        <text x="550" y="138" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Nutrition Rm</text>
-        <text x="550" y="193" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">RN Station</text>
-        <text x="550" y="303" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Med Rm</text>
-        <text x="550" y="413" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">RN Station</text>
-
-        {/* Bottom landmarks */}
-        <text x="220" y="405" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Double Lift</text>
-        <text x="480" y="460" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Double Lift</text>
-        <text x="350" y="510" textAnchor="middle" fontSize="9" fontWeight="600" fill="#64748b" fontFamily="system-ui, sans-serif">HUC &amp; Charge RN</text>
-        <text x="620" y="525" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="system-ui, sans-serif">Neg. Pressure</text>
+        {/* Wing labels */}
+        <text x="150" y="18" textAnchor="middle" fontSize="11" fontWeight="700" fill="#94a3b8" fontFamily="system-ui, sans-serif">North Wing</text>
+        <text x="550" y="18" textAnchor="middle" fontSize="11" fontWeight="700" fill="#94a3b8" fontFamily="system-ui, sans-serif">South Wing</text>
 
         {rooms.map((room) => {
           const { x, y, rotation, width, height } = getRoomCoordinates(room.room);

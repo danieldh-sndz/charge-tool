@@ -482,7 +482,7 @@ export default function App() {
       if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
       if (nurse.patients === 3 && (roomAcuity > 2 || nurse.hasAcuityGreaterThan2)) score += 20;
       // Soft: prefer keeping nurses in one wing
-      if (nurse.wings.size > 0 && !nurse.wings.has(roomWing)) score += 15;
+      if (nurse.patients < 3 && nurse.wings.size > 0 && !nurse.wings.has(roomWing)) score += 15;
       return score;
     };
 

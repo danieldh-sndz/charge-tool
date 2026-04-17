@@ -3,17 +3,17 @@ import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock,
 import { Analytics } from '@vercel/analytics/react';
 
 const initialNurses = [
-  { id: 1, noChemo: false, name: 'RN 1', locked: false },
-  { id: 2, noChemo: false, name: 'RN 2', locked: false },
-  { id: 3, noChemo: false, name: 'RN 3', locked: false },
-  { id: 4, noChemo: false, name: 'RN 4', locked: false },
-  { id: 5, noChemo: false, name: 'RN 5', locked: false },
-  { id: 6, noChemo: false, name: 'RN 6', locked: false },
-  { id: 7, noChemo: false, name: 'RN 7', locked: false },
-  { id: 8, noChemo: false, name: 'RN 8', locked: false },
-  { id: 9, noChemo: false, name: 'RN 9', locked: false },
-  { id: 10, noChemo: false, name: 'RN 10', locked: false },
-  { id: 11, noChemo: false, name: 'RN 11', locked: false },
+  { id: 1, noChemo: false, noIec: false, name: 'RN 1', locked: false },
+  { id: 2, noChemo: false, noIec: false, name: 'RN 2', locked: false },
+  { id: 3, noChemo: false, noIec: false, name: 'RN 3', locked: false },
+  { id: 4, noChemo: false, noIec: false, name: 'RN 4', locked: false },
+  { id: 5, noChemo: false, noIec: false, name: 'RN 5', locked: false },
+  { id: 6, noChemo: false, noIec: false, name: 'RN 6', locked: false },
+  { id: 7, noChemo: false, noIec: false, name: 'RN 7', locked: false },
+  { id: 8, noChemo: false, noIec: false, name: 'RN 8', locked: false },
+  { id: 9, noChemo: false, noIec: false, name: 'RN 9', locked: false },
+  { id: 10, noChemo: false, noIec: false, name: 'RN 10', locked: false },
+  { id: 11, noChemo: false, noIec: false, name: 'RN 11', locked: false },
 ];
 
 const generateInitialRooms = () => {
@@ -25,6 +25,7 @@ const generateInitialRooms = () => {
     imc: false,
     cna: false,
     chemo: false,
+    iec: false,
     notIndep: false,
     rn: '-',
     locked: false
@@ -159,6 +160,7 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
           const flags = [];
           if (isFilled && room.admit) flags.push({ label: 'A', color: '#16a34a' });
           if (isFilled && room.chemo) flags.push({ label: 'C', color: '#dc2626' });
+          if (isFilled && room.iec)   flags.push({ label: 'E', color: '#0891b2' });
           if (isFilled && room.imc)   flags.push({ label: 'I', color: '#7c3aed' });
 
           return (
@@ -267,6 +269,7 @@ export default function App() {
     acuity3: 10,
     admits: 3,
     chemo: 5,
+    iec: 2,
     notIndep: 5
   });
 
@@ -274,7 +277,7 @@ export default function App() {
     const stats = {};
     nurses.forEach(nurse => {
       if (nurse.name) {
-        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
+        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
       }
     });
 
@@ -284,6 +287,7 @@ export default function App() {
           id: room.room,
           admit: room.admit,
           chemo: room.chemo,
+          iec: room.iec,
           imc: room.imc,
           acuity: Number(room.acuity) || 0,
           cna: room.cna,
@@ -292,6 +296,7 @@ export default function App() {
         stats[room.rn].acuity += Number(room.acuity) || 0;
 
         if (room.chemo) stats[room.rn].hasChemo = true;
+        if (room.iec) stats[room.rn].hasIec = true;
         if (room.imc) stats[room.rn].imcs += 1;
         if (room.admit) stats[room.rn].admits += 1;
         if (Number(room.acuity) === 4) stats[room.rn].acuity4Count += 1;
@@ -312,11 +317,12 @@ export default function App() {
         acuity3Count: acc.acuity3Count + (isFilled && acuityVal === 3 ? 1 : 0),
         census: acc.census + (isFilled ? 1 : 0),
         chemoCount: acc.chemoCount + (isFilled && room.chemo ? 1 : 0),
+        iecCount: acc.iecCount + (isFilled && room.iec ? 1 : 0),
         imcCount: acc.imcCount + (isFilled && room.imc ? 1 : 0),
         admitsCount: acc.admitsCount + (isFilled && room.admit ? 1 : 0),
         cnaCount: acc.cnaCount + (isFilled && room.cna ? 1 : 0)
       };
-    }, { totalAcuity: 0, acuity4Count: 0, acuity3Count: 0, census: 0, chemoCount: 0, imcCount: 0, admitsCount: 0, cnaCount: 0 });
+    }, { totalAcuity: 0, acuity4Count: 0, acuity3Count: 0, census: 0, chemoCount: 0, iecCount: 0, imcCount: 0, admitsCount: 0, cnaCount: 0 });
 
     return { ...stats, activeNursesCount };
   }, [rooms, nurses]);
@@ -324,13 +330,14 @@ export default function App() {
   const applyRemix = () => {
     const targetAdmits = parseInt(remixCounts.admits) || 0;
     const targetChemos = parseInt(remixCounts.chemo) || 0;
+    const targetIec = parseInt(remixCounts.iec) || 0;
     const targetNotIndep = parseInt(remixCounts.notIndep) || 0;
     const targetL4s = parseInt(remixCounts.acuity4) || 0;
     const targetL3s = parseInt(remixCounts.acuity3) || 0;
 
     let nextRooms = rooms.map(room => {
       if (room.locked) return room;
-      return { ...room, tx: mockDiagnoses[Math.floor(Math.random() * mockDiagnoses.length)], acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
+      return { ...room, tx: mockDiagnoses[Math.floor(Math.random() * mockDiagnoses.length)], acuity: 2, admit: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
     });
 
     const filledIndices = nextRooms.map((r, i) => (!r.locked && r.tx !== '' ? i : null)).filter(val => val !== null);
@@ -358,6 +365,9 @@ export default function App() {
     });
     shuffleArray(filledIndices).slice(0, targetChemos).forEach(idx => {
       nextRooms[idx] = { ...nextRooms[idx], chemo: true };
+    });
+    shuffleArray(filledIndices).slice(0, targetIec).forEach(idx => {
+      nextRooms[idx] = { ...nextRooms[idx], iec: true };
     });
     shuffleArray(filledIndices).slice(0, targetNotIndep).forEach(idx => {
       nextRooms[idx] = { ...nextRooms[idx], notIndep: true };
@@ -389,7 +399,7 @@ export default function App() {
     if (isClearing) {
       const newRooms = rooms.map(room => {
         if (room.locked) return room;
-        return { ...room, tx: `Pt ${room.room}`, acuity: 2, admit: false, imc: false, cna: false, chemo: false, notIndep: false, rn: '-' };
+        return { ...room, tx: `Pt ${room.room}`, acuity: 2, admit: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
       });
       setRooms(newRooms);
       setRationale("All unlocked rooms reset to default state (Pt #, Acuity 2).");
@@ -428,7 +438,7 @@ export default function App() {
       nurseLoads[n.name] = {
         name: n.name, acuity: 0, patients: 0, admits: 0, imcs: 0,
         acuity4Count: 0, hasAcuityGreaterThan2: false,
-        isChemoCert: !n.noChemo, isLocked: n.locked,
+        isChemoCert: !n.noChemo, isIecCert: !n.noIec, isLocked: n.locked,
         wings: new Set()
       };
     });
@@ -461,10 +471,12 @@ export default function App() {
     const sortedRooms = [...rooms].sort((a, b) => {
       let scoreA = Number(a.acuity || 0);
       if (a.chemo) scoreA += 100;
+      if (a.iec) scoreA += 100;
       if (a.imc) scoreA += 50;
       if (a.admit) scoreA += 25;
       let scoreB = Number(b.acuity || 0);
       if (b.chemo) scoreB += 100;
+      if (b.iec) scoreB += 100;
       if (b.imc) scoreB += 50;
       if (b.admit) scoreB += 25;
       return scoreB - scoreA;
@@ -473,7 +485,7 @@ export default function App() {
     const activeRooms = sortedRooms.filter(r => r.tx && r.tx.trim() !== '' && !effectivelyLockedRoomIds.has(r.room));
     const assignments = {};
     let unassignedRooms = [];
-    let placedChemo = 0, placedAdmits = 0, placedAcuity4 = 0;
+    let placedChemo = 0, placedIec = 0, placedAdmits = 0, placedAcuity4 = 0;
 
     const getNurseLoadScore = (nurse, roomAcuity, isAdmit, roomWing) => {
       let score = (nurse.patients * 3.5) + nurse.acuity;
@@ -489,10 +501,11 @@ export default function App() {
     activeRooms.forEach(room => {
       const roomAcuity = Number(room.acuity || 0);
       const roomWing = getRoomWing(room.room);
-      const isAdmit = room.admit, isChemo = room.chemo, isImc = room.imc;
+      const isAdmit = room.admit, isChemo = room.chemo, isImc = room.imc, isIec = room.iec;
       let eligible = Object.values(nurseLoads).filter(n => {
         if (n.isLocked || n.patients >= 4) return false;
         if (isChemo && !n.isChemoCert) return false;
+        if (isIec && !n.isIecCert) return false;
         if (isAdmit && n.admits >= 1) return false;
         if (isImc && n.patients >= 3) return false;
         if (n.imcs > 0 && n.patients >= 3) return false;
@@ -511,6 +524,7 @@ export default function App() {
         if (isAdmit) { chosenNurse.admits += 1; placedAdmits++; }
         if (isImc) chosenNurse.imcs += 1;
         if (isChemo) placedChemo++;
+        if (isIec) placedIec++;
         if (roomAcuity > 2) chosenNurse.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) { chosenNurse.acuity4Count += 1; placedAcuity4++; }
         chosenNurse.wings.add(roomWing);
@@ -519,6 +533,7 @@ export default function App() {
         let traits = [];
         if (roomAcuity === 4) traits.push("Acuity 4");
         if (isChemo) traits.push("Chemo");
+        if (isIec) traits.push("IEC");
         if (isImc) traits.push("IMC");
         if (isAdmit) traits.push("Admit");
         unassignedRooms.push({ id: room.room, reason: traits.join(', ') || `Acuity ${roomAcuity}` });
@@ -531,7 +546,7 @@ export default function App() {
     });
     setRooms(newRooms);
     setRationale({
-      stats: { locked: lockedCount, chemo: placedChemo, admits: placedAdmits, acuity4: placedAcuity4, assignedCount: Object.keys(assignments).length - unassignedRooms.length },
+      stats: { locked: lockedCount, chemo: placedChemo, iec: placedIec, admits: placedAdmits, acuity4: placedAcuity4, assignedCount: Object.keys(assignments).length - unassignedRooms.length },
       unassigned: unassignedRooms
     });
   };
@@ -572,7 +587,7 @@ export default function App() {
   const addNurse = () => {
     const name = newNurseName.trim();
     if (!name) return;
-    setNurses([...nurses, { id: Date.now(), noChemo: false, name, locked: false }]);
+    setNurses([...nurses, { id: Date.now(), noChemo: false, noIec: false, name, locked: false }]);
     setNewNurseName('');
   };
 
@@ -624,6 +639,10 @@ export default function App() {
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Chemo Pts</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.chemo} onChange={(e) => setRemixCounts({...remixCounts, chemo: e.target.value})} />
                 </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">IEC Pts</label>
+                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.iec} onChange={(e) => setRemixCounts({...remixCounts, iec: e.target.value})} />
+                </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Not Independent</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.notIndep} onChange={(e) => setRemixCounts({...remixCounts, notIndep: e.target.value})} />
@@ -674,6 +693,10 @@ export default function App() {
             <span className="text-xs text-fuchsia-600 font-bold uppercase tracking-wider mb-1">Chemo</span>
             <span className="text-3xl font-black text-fuchsia-900 leading-none">{summaryStats.chemoCount}</span>
           </div>
+          <div className="flex flex-col items-center justify-center p-3 bg-cyan-50 rounded-lg border border-cyan-100 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">IEC</span>
+            <span className="text-3xl font-black text-cyan-900 leading-none">{summaryStats.iecCount}</span>
+          </div>
           <div className="flex flex-col items-center justify-center p-3 bg-teal-50 rounded-lg border border-teal-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
             <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
@@ -691,6 +714,7 @@ export default function App() {
                 <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed opacity-90 mb-3">
                   <li><strong>Success:</strong> Auto-assigned {rationale.stats.assignedCount} patients while preserving {rationale.stats.locked} locked assignments.</li>
                   <li><strong>Chemo Safety:</strong> Placed {rationale.stats.chemo} active Chemo patients with certified RNs.</li>
+                  <li><strong>IEC Safety:</strong> Placed {rationale.stats.iec} active IEC patients with certified RNs.</li>
                   <li><strong>Critical Care:</strong> Safely distributed {rationale.stats.acuity4} Acuity 4 patients (Max 1 per RN, capped at 3 patients total).</li>
                   <li><strong>Admissions:</strong> Assigned {rationale.stats.admits} admits (Max 1 per RN).</li>
                 </ul>
@@ -723,6 +747,7 @@ export default function App() {
                   <tr>
                     <th className="px-2 py-2 w-8 text-center"></th>
                     <th className="px-2 py-2 w-16 text-center">No Chemo</th>
+                    <th className="px-2 py-2 w-16 text-center">No IEC</th>
                     <th className="px-3 py-2">RN Name</th>
                     <th className="px-3 py-2">Assigned Rooms</th>
                     <th className="px-3 py-2 text-center">Total Acuity</th>
@@ -731,15 +756,16 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {nurses.map((nurse, index) => {
-                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
+                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
 
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
+                    const iecWarning = nurse.noIec && stats.hasIec;
                     const patientCountWarning = stats.rooms.length > 4;
                     const admitWarning = stats.admits > 1;
                     const imcWarning = stats.imcs > 0 && stats.rooms.length > 3;
                     const acuity4Warning = stats.acuity4Count > 1;
                     const acuity4LoadWarning = stats.acuity4Count > 0 && stats.rooms.length > 3;
-                    const hasCriticalWarning = chemoWarning || patientCountWarning || admitWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
+                    const hasCriticalWarning = chemoWarning || iecWarning || patientCountWarning || admitWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
 
                     const admitLoadWarning = stats.admits > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
@@ -750,6 +776,7 @@ export default function App() {
                     let tooltipMsgs = [];
                     if (nurse.locked) tooltipMsgs.push("Assignment Locked");
                     if (chemoWarning) tooltipMsgs.push("Non-certified RN assigned to Chemo patient!");
+                    if (iecWarning) tooltipMsgs.push("Non-certified RN assigned to IEC patient!");
                     if (patientCountWarning) tooltipMsgs.push("RN has more than 4 patients!");
                     if (admitWarning) tooltipMsgs.push("RN has more than 1 admit!");
                     if (imcWarning) tooltipMsgs.push("RN with IMC has more than 3 patients!");
@@ -776,6 +803,7 @@ export default function App() {
                       <tr key={nurse.id} className={rowClass} onMouseEnter={() => setHoveredNurse(nurse.name)} onMouseLeave={() => setHoveredNurse(null)}>
                         <td className="px-2 py-1 text-center"><button onClick={() => toggleNurseLock(index)} className={`p-1 rounded-md transition-colors ${nurse.locked ? 'text-purple-600' : 'text-slate-300 hover:text-slate-500'}`}>{nurse.locked ? <Lock size={14} /> : <Unlock size={14} />}</button></td>
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={nurse.noChemo || false} onChange={(e) => updateNurse(index, 'noChemo', e.target.checked)} /></td>
+                        <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={nurse.noIec || false} onChange={(e) => updateNurse(index, 'noIec', e.target.checked)} /></td>
                         <td className="px-2 py-1"><input type="text" className={`w-full p-1 border-none bg-transparent hover:bg-slate-100 rounded font-medium focus:ring-1 focus:ring-blue-500 ${nameClass}`} value={nurse.name} onChange={(e) => updateNurse(index, 'name', e.target.value)} placeholder="Name..." /></td>
                         <td className="px-2 py-1 cursor-pointer group" onClick={() => { if (nurse.name) setEditingRooms(nurse.id); }}>
                           {editingRooms === nurse.id ? (
@@ -803,7 +831,7 @@ export default function App() {
                             <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
                                 <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
-                                  {(r.admit || r.chemo || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{r.admit && <span className="text-green-600">a</span>}{r.chemo && <span className="text-rose-600">c</span>}{r.imc && <span className="text-purple-600">i</span>}</span>}
+                                  {(r.admit || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{r.admit && <span className="text-green-600">a</span>}{r.chemo && <span className="text-rose-600">c</span>}{r.iec && <span className="text-cyan-600">e</span>}{r.imc && <span className="text-purple-600">i</span>}</span>}
                                   <span className="font-semibold text-sm leading-none">{r.id}</span>
                                   <span className="font-bold text-[9px] text-slate-500 relative -top-1.5">{r.acuity}</span>
                                 </span>
@@ -819,7 +847,7 @@ export default function App() {
                     );
                   })}
                   <tr className="border-t border-slate-200 bg-slate-50">
-                    <td colSpan={6} className="px-3 py-2">
+                    <td colSpan={7} className="px-3 py-2">
                       <input
                         type="text"
                         className="w-full bg-transparent text-sm placeholder-slate-400 focus:outline-none"
@@ -860,6 +888,7 @@ export default function App() {
                     <th className="px-3 py-3 w-16 text-center">IMC</th>
                     <th className="px-2 py-3 w-16 text-center">Admit</th>
                     <th className="px-3 py-3 w-16 text-center">Chemo</th>
+                    <th className="px-3 py-3 w-16 text-center">IEC</th>
                     <th className="px-3 py-3 w-16 text-center">CNA</th>
                     <th className="px-3 py-3 w-32">Assigned RN</th>
                     <th className="px-2 py-3 w-10 text-center">Lock</th>
@@ -874,6 +903,7 @@ export default function App() {
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
+                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={room.iec || false} onChange={(e) => updateRoom(index, 'iec', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
                       <td className="px-2 py-1">
                         <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>
@@ -906,6 +936,7 @@ export default function App() {
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Single High Acuity:</strong> No nurse will be assigned more than <strong className="text-rose-700">one</strong> Acuity 4 patient.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Chemo Safety:</strong> Nurses with "No Chemo" checked are strictly excluded from active chemo patients.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">IEC Safety:</strong> Nurses with "No IEC" checked are strictly excluded from active IEC patients.</span></li>
             </ul>
           </div>
           <div>
@@ -924,6 +955,7 @@ export default function App() {
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500">
             <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">a</span></span>
             <span className="flex items-center gap-1">Chemo <span className="font-bold text-[10px] text-rose-600 bg-blue-100 px-1 rounded -mt-1">c</span></span>
+            <span className="flex items-center gap-1">IEC <span className="font-bold text-[10px] text-cyan-600 bg-blue-100 px-1 rounded -mt-1">e</span></span>
             <span className="flex items-center gap-1">IMC <span className="font-bold text-[10px] text-purple-600 bg-blue-100 px-1 rounded -mt-1">i</span></span>
             <span className="flex items-center gap-1">Acuity <span className="font-bold text-[9px] text-slate-500 bg-blue-100 px-1 rounded -mt-1 ml-0.5">2</span></span>
             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-rose-50 border border-rose-200 inline-block rounded-sm"></span> Rule Violation</span>

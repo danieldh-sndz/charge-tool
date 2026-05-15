@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X } from 'lucide-react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
 const initialNurses = [
@@ -22,6 +22,8 @@ const generateInitialRooms = () => {
     tx: `Pt ${i + 1}`,
     acuity: 2,
     admit: false,
+    discharge: false,
+    transplant: false,
     imc: false,
     cna: false,
     chemo: false,
@@ -116,7 +118,7 @@ const NURSE_COLORS = [
 const ACUITY_COLOR = { 1: '#94a3b8', 2: '#94a3b8', 3: '#f59e0b', 4: '#ef4444' };
 
 // Defined outside App so React doesn't unmount/remount it on every parent render
-function UnitMap({ rooms, nurses, hoveredNurse }) {
+function UnitMap({ rooms, nurses, hoveredNurse, shiftMode }) {
   const nurseColorMap = {};
   nurses.filter(n => n.name?.trim()).forEach((nurse, i) => {
     nurseColorMap[nurse.name] = NURSE_COLORS[i % NURSE_COLORS.length];
@@ -158,7 +160,9 @@ function UnitMap({ rooms, nurses, hoveredNurse }) {
             : '';
 
           const flags = [];
-          if (isFilled && room.admit) flags.push({ label: 'A', color: '#16a34a' });
+          if (isFilled && shiftMode === 'night' && room.admit) flags.push({ label: 'A', color: '#16a34a' });
+          if (isFilled && shiftMode === 'day' && room.discharge) flags.push({ label: 'D', color: '#ea580c' });
+          if (isFilled && shiftMode === 'day' && room.transplant) flags.push({ label: 'T', color: '#db2777' });
           if (isFilled && room.chemo) flags.push({ label: 'C', color: '#dc2626' });
           if (isFilled && room.iec)   flags.push({ label: 'E', color: '#0891b2' });
           if (isFilled && room.imc)   flags.push({ label: 'I', color: '#7c3aed' });
@@ -238,8 +242,9 @@ export default function App() {
   const [rooms, setRooms] = useState(() => {
     const stored = loadState('rooms', null);
     if (!stored || stored.length !== 32 || stored.some(r => r.room === 'H')) return initialRooms;
-    return stored;
+    return stored.map(r => ({ discharge: false, transplant: false, ...r }));
   });
+  const [shiftMode, setShiftMode] = useState(() => loadState('shiftMode', 'night'));
   const [localInputs, setLocalInputs] = useState({});
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
@@ -261,6 +266,7 @@ export default function App() {
 
   useEffect(() => { saveState('nurses', nurses); }, [nurses]);
   useEffect(() => { saveState('rooms', rooms); }, [rooms]);
+  useEffect(() => { saveState('shiftMode', shiftMode); }, [shiftMode]);
 
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);
@@ -268,16 +274,17 @@ export default function App() {
     acuity4: 4,
     acuity3: 10,
     admits: 3,
+    discharges: 3,
+    transplants: 2,
     chemo: 5,
-    iec: 2,
-    notIndep: 5
+    iec: 2
   });
 
   const nurseStats = useMemo(() => {
     const stats = {};
     nurses.forEach(nurse => {
       if (nurse.name) {
-        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
+        stats[nurse.name] = { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, discharges: 0, transplants: 0, acuity4Count: 0, wings: new Set() };
       }
     });
 
@@ -286,6 +293,8 @@ export default function App() {
         stats[room.rn].rooms.push({
           id: room.room,
           admit: room.admit,
+          discharge: room.discharge,
+          transplant: room.transplant,
           chemo: room.chemo,
           iec: room.iec,
           imc: room.imc,
@@ -299,6 +308,8 @@ export default function App() {
         if (room.iec) stats[room.rn].hasIec = true;
         if (room.imc) stats[room.rn].imcs += 1;
         if (room.admit) stats[room.rn].admits += 1;
+        if (room.discharge) stats[room.rn].discharges += 1;
+        if (room.transplant) stats[room.rn].transplants += 1;
         if (Number(room.acuity) === 4) stats[room.rn].acuity4Count += 1;
         stats[room.rn].wings.add(getRoomWing(room.room));
       }
@@ -320,24 +331,27 @@ export default function App() {
         iecCount: acc.iecCount + (isFilled && room.iec ? 1 : 0),
         imcCount: acc.imcCount + (isFilled && room.imc ? 1 : 0),
         admitsCount: acc.admitsCount + (isFilled && room.admit ? 1 : 0),
+        dischargesCount: acc.dischargesCount + (isFilled && room.discharge ? 1 : 0),
+        transplantsCount: acc.transplantsCount + (isFilled && room.transplant ? 1 : 0),
         cnaCount: acc.cnaCount + (isFilled && room.cna ? 1 : 0)
       };
-    }, { totalAcuity: 0, acuity4Count: 0, acuity3Count: 0, census: 0, chemoCount: 0, iecCount: 0, imcCount: 0, admitsCount: 0, cnaCount: 0 });
+    }, { totalAcuity: 0, acuity4Count: 0, acuity3Count: 0, census: 0, chemoCount: 0, iecCount: 0, imcCount: 0, admitsCount: 0, dischargesCount: 0, transplantsCount: 0, cnaCount: 0 });
 
     return { ...stats, activeNursesCount };
   }, [rooms, nurses]);
 
   const applyRemix = () => {
     const targetAdmits = parseInt(remixCounts.admits) || 0;
+    const targetDischarges = parseInt(remixCounts.discharges) || 0;
+    const targetTransplants = parseInt(remixCounts.transplants) || 0;
     const targetChemos = parseInt(remixCounts.chemo) || 0;
     const targetIec = parseInt(remixCounts.iec) || 0;
-    const targetNotIndep = parseInt(remixCounts.notIndep) || 0;
     const targetL4s = parseInt(remixCounts.acuity4) || 0;
     const targetL3s = parseInt(remixCounts.acuity3) || 0;
 
     let nextRooms = rooms.map(room => {
       if (room.locked) return room;
-      return { ...room, tx: mockDiagnoses[Math.floor(Math.random() * mockDiagnoses.length)], acuity: 2, admit: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
+      return { ...room, tx: mockDiagnoses[Math.floor(Math.random() * mockDiagnoses.length)], acuity: 2, admit: false, discharge: false, transplant: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
     });
 
     const filledIndices = nextRooms.map((r, i) => (!r.locked && r.tx !== '' ? i : null)).filter(val => val !== null);
@@ -359,18 +373,24 @@ export default function App() {
       return { ...room, imc };
     });
 
-    // Assign boolean flags immutably
-    shuffleArray(filledIndices).slice(0, targetAdmits).forEach(idx => {
-      nextRooms[idx] = { ...nextRooms[idx], admit: true };
-    });
+    // Assign boolean flags immutably (admit for night shift; discharge + transplant for day shift)
+    if (shiftMode === 'night') {
+      shuffleArray(filledIndices).slice(0, targetAdmits).forEach(idx => {
+        nextRooms[idx] = { ...nextRooms[idx], admit: true };
+      });
+    } else {
+      shuffleArray(filledIndices).slice(0, targetDischarges).forEach(idx => {
+        nextRooms[idx] = { ...nextRooms[idx], discharge: true };
+      });
+      shuffleArray(filledIndices).slice(0, targetTransplants).forEach(idx => {
+        nextRooms[idx] = { ...nextRooms[idx], transplant: true };
+      });
+    }
     shuffleArray(filledIndices).slice(0, targetChemos).forEach(idx => {
       nextRooms[idx] = { ...nextRooms[idx], chemo: true };
     });
     shuffleArray(filledIndices).slice(0, targetIec).forEach(idx => {
       nextRooms[idx] = { ...nextRooms[idx], iec: true };
-    });
-    shuffleArray(filledIndices).slice(0, targetNotIndep).forEach(idx => {
-      nextRooms[idx] = { ...nextRooms[idx], notIndep: true };
     });
 
     setRooms(nextRooms);
@@ -384,22 +404,26 @@ export default function App() {
       const isFilled = room.tx && room.tx.trim() !== '';
       if (!isFilled) return room;                              // Bug fix: skip empty rooms
       const isAcuity4 = Number(room.acuity) === 4;
-      const isAdmit = room.admit;
+      const isAdmit = shiftMode === 'night' && room.admit;
+      const isDischarge = shiftMode === 'day' && room.discharge;
+      const isTransplant = shiftMode === 'day' && room.transplant;
       const isNotIndep = room.notIndep;
-      if (isAcuity4 || isAdmit || isNotIndep) {
+      if (isAcuity4 || isAdmit || isDischarge || isTransplant || isNotIndep) {
         return { ...room, cna: true };
       }
       return room;
     });
     setRooms(newRooms);
-    setRationale("CNAs automatically assigned to all Acuity 4 patients, Admissions, and Not Independent patients.");
+    setRationale(shiftMode === 'day'
+      ? "CNAs automatically assigned to all Acuity 4 patients, Discharges, Transplants, and Not Independent patients."
+      : "CNAs automatically assigned to all Acuity 4 patients, Admissions, and Not Independent patients.");
   };
 
   const clearRooms = () => {
     if (isClearing) {
       const newRooms = rooms.map(room => {
         if (room.locked) return room;
-        return { ...room, tx: `Pt ${room.room}`, acuity: 2, admit: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
+        return { ...room, tx: `Pt ${room.room}`, acuity: 2, admit: false, discharge: false, transplant: false, imc: false, cna: false, chemo: false, iec: false, notIndep: false, rn: '-' };
       });
       setRooms(newRooms);
       setRationale("All unlocked rooms reset to default state (Pt #, Acuity 2).");
@@ -436,7 +460,7 @@ export default function App() {
     const nurseLoads = {};
     activeNurses.forEach(n => {
       nurseLoads[n.name] = {
-        name: n.name, acuity: 0, patients: 0, admits: 0, imcs: 0,
+        name: n.name, acuity: 0, patients: 0, admits: 0, discharges: 0, transplants: 0, imcs: 0,
         acuity4Count: 0, hasAcuityGreaterThan2: false,
         isChemoCert: !n.noChemo, isIecCert: !n.noIec, isLocked: n.locked,
         wings: new Set()
@@ -460,6 +484,8 @@ export default function App() {
         n.patients += 1;
         n.acuity += roomAcuity;
         if (room.admit) n.admits += 1;
+        if (room.discharge) n.discharges += 1;
+        if (room.transplant) n.transplants += 1;
         if (room.imc) n.imcs += 1;
         if (roomAcuity > 2) n.hasAcuityGreaterThan2 = true;
         if (roomAcuity === 4) n.acuity4Count += 1;
@@ -473,25 +499,41 @@ export default function App() {
       if (a.chemo) scoreA += 100;
       if (a.iec) scoreA += 100;
       if (a.imc) scoreA += 50;
-      if (a.admit) scoreA += 25;
+      if (shiftMode === 'night' && a.admit) scoreA += 25;
+      if (shiftMode === 'day' && a.discharge) scoreA += 25;
+      if (shiftMode === 'day' && a.transplant) scoreA += 30;
       let scoreB = Number(b.acuity || 0);
       if (b.chemo) scoreB += 100;
       if (b.iec) scoreB += 100;
       if (b.imc) scoreB += 50;
-      if (b.admit) scoreB += 25;
+      if (shiftMode === 'night' && b.admit) scoreB += 25;
+      if (shiftMode === 'day' && b.discharge) scoreB += 25;
+      if (shiftMode === 'day' && b.transplant) scoreB += 30;
       return scoreB - scoreA;
     });
 
     const activeRooms = sortedRooms.filter(r => r.tx && r.tx.trim() !== '' && !effectivelyLockedRoomIds.has(r.room));
     const assignments = {};
     let unassignedRooms = [];
-    let placedChemo = 0, placedIec = 0, placedAdmits = 0, placedAcuity4 = 0;
+    let placedChemo = 0, placedIec = 0, placedAdmits = 0, placedAcuity4 = 0, placedDischarges = 0, placedTransplants = 0;
 
-    const getNurseLoadScore = (nurse, roomAcuity, isAdmit, roomWing) => {
+    const getNurseLoadScore = (nurse, roomAcuity, isAdmit, isDischarge, isTransplant, roomWing) => {
       let score = (nurse.patients * 3.5) + nurse.acuity;
       if (nurse.acuity + roomAcuity >= 10) score += 100;
-      if ((nurse.acuity4Count > 0 && isAdmit) || (nurse.admits > 0 && roomAcuity === 4)) score += 50;
-      if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
+      if (shiftMode === 'night') {
+        if ((nurse.acuity4Count > 0 && isAdmit) || (nurse.admits > 0 && roomAcuity === 4)) score += 50;
+        if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
+      }
+      if (shiftMode === 'day') {
+        // Discharge mirrors admit: avoid pairing with acuity 4
+        if ((nurse.acuity4Count > 0 && isDischarge) || (nurse.discharges > 0 && roomAcuity === 4)) score += 50;
+        if (nurse.patients === 3 && (nurse.discharges > 0 || isDischarge)) score += 25;
+        // Avoid combining transplant with discharge
+        if ((nurse.transplants > 0 && isDischarge) || (nurse.discharges > 0 && isTransplant)) score += 50;
+        // Avoid transplant + acuity 4 unless the transplant patient IS acuity 4
+        if (isTransplant && nurse.acuity4Count > 0 && roomAcuity !== 4) score += 50;
+        if (!isTransplant && roomAcuity === 4 && nurse.transplants > 0) score += 50;
+      }
       if (nurse.patients === 3 && (roomAcuity > 2 || nurse.hasAcuityGreaterThan2)) score += 20;
       // Soft: prefer keeping nurses in one wing
       if (nurse.patients < 3 && nurse.wings.size > 0 && !nurse.wings.has(roomWing)) score += 15;
@@ -501,12 +543,17 @@ export default function App() {
     activeRooms.forEach(room => {
       const roomAcuity = Number(room.acuity || 0);
       const roomWing = getRoomWing(room.room);
-      const isAdmit = room.admit, isChemo = room.chemo, isImc = room.imc, isIec = room.iec;
+      const isAdmit = shiftMode === 'night' && room.admit;
+      const isDischarge = shiftMode === 'day' && room.discharge;
+      const isTransplant = shiftMode === 'day' && room.transplant;
+      const isChemo = room.chemo, isImc = room.imc, isIec = room.iec;
       let eligible = Object.values(nurseLoads).filter(n => {
         if (n.isLocked || n.patients >= 4) return false;
         if (isChemo && !n.isChemoCert) return false;
         if (isIec && !n.isIecCert) return false;
         if (isAdmit && n.admits >= 1) return false;
+        if (isDischarge && n.discharges >= 1) return false;
+        if (isTransplant && n.transplants >= 1) return false;
         if (isImc && n.patients >= 3) return false;
         if (n.imcs > 0 && n.patients >= 3) return false;
         if (roomAcuity === 4 && (n.acuity4Count >= 1 || n.patients >= 3)) return false;
@@ -514,7 +561,10 @@ export default function App() {
         return true;
       });
 
-      eligible.sort((a, b) => getNurseLoadScore(a, roomAcuity, isAdmit, roomWing) - getNurseLoadScore(b, roomAcuity, isAdmit, roomWing));
+      eligible.sort((a, b) =>
+        getNurseLoadScore(a, roomAcuity, isAdmit, isDischarge, isTransplant, roomWing)
+        - getNurseLoadScore(b, roomAcuity, isAdmit, isDischarge, isTransplant, roomWing)
+      );
 
       if (eligible.length > 0) {
         const chosenNurse = eligible[0];
@@ -522,6 +572,8 @@ export default function App() {
         chosenNurse.acuity += roomAcuity;
         chosenNurse.patients += 1;
         if (isAdmit) { chosenNurse.admits += 1; placedAdmits++; }
+        if (isDischarge) { chosenNurse.discharges += 1; placedDischarges++; }
+        if (isTransplant) { chosenNurse.transplants += 1; placedTransplants++; }
         if (isImc) chosenNurse.imcs += 1;
         if (isChemo) placedChemo++;
         if (isIec) placedIec++;
@@ -533,9 +585,11 @@ export default function App() {
         let traits = [];
         if (roomAcuity === 4) traits.push("Acuity 4");
         if (isChemo) traits.push("Chemo");
-        if (isIec) traits.push("IEC");
+        if (isIec) traits.push("ICANS");
         if (isImc) traits.push("IMC");
         if (isAdmit) traits.push("Admit");
+        if (isDischarge) traits.push("Discharge");
+        if (isTransplant) traits.push("Transplant");
         unassignedRooms.push({ id: room.room, reason: traits.join(', ') || `Acuity ${roomAcuity}` });
       }
     });
@@ -546,7 +600,7 @@ export default function App() {
     });
     setRooms(newRooms);
     setRationale({
-      stats: { locked: lockedCount, chemo: placedChemo, iec: placedIec, admits: placedAdmits, acuity4: placedAcuity4, assignedCount: Object.keys(assignments).length - unassignedRooms.length },
+      stats: { locked: lockedCount, chemo: placedChemo, iec: placedIec, admits: placedAdmits, discharges: placedDischarges, transplants: placedTransplants, acuity4: placedAcuity4, assignedCount: Object.keys(assignments).length - unassignedRooms.length },
       unassigned: unassignedRooms
     });
   };
@@ -631,21 +685,30 @@ export default function App() {
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Acuity 3s</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.acuity3} onChange={(e) => setRemixCounts({...remixCounts, acuity3: e.target.value})} />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Admissions</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.admits} onChange={(e) => setRemixCounts({...remixCounts, admits: e.target.value})} />
-                </div>
+                {shiftMode === 'night' ? (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Admissions</label>
+                    <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.admits} onChange={(e) => setRemixCounts({...remixCounts, admits: e.target.value})} />
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Discharges</label>
+                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.discharges} onChange={(e) => setRemixCounts({...remixCounts, discharges: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Transplants</label>
+                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.transplants} onChange={(e) => setRemixCounts({...remixCounts, transplants: e.target.value})} />
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Chemo Pts</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.chemo} onChange={(e) => setRemixCounts({...remixCounts, chemo: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">IEC Pts</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">ICANS Pts</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.iec} onChange={(e) => setRemixCounts({...remixCounts, iec: e.target.value})} />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Not Independent</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.notIndep} onChange={(e) => setRemixCounts({...remixCounts, notIndep: e.target.value})} />
                 </div>
               </div>
             </div>
@@ -685,22 +748,49 @@ export default function App() {
             <span className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">IMC</span>
             <span className="text-3xl font-black text-blue-900 leading-none">{summaryStats.imcCount}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Admits</span>
-            <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.admitsCount}</span>
-          </div>
+          {shiftMode === 'night' ? (
+            <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
+              <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Admits</span>
+              <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.admitsCount}</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col items-center justify-center p-3 bg-orange-50 rounded-lg border border-orange-100 min-w-[100px] flex-1 sm:flex-none">
+                <span className="text-xs text-orange-600 font-bold uppercase tracking-wider mb-1">Discharges</span>
+                <span className="text-3xl font-black text-orange-900 leading-none">{summaryStats.dischargesCount}</span>
+              </div>
+              <div className="flex flex-col items-center justify-center p-3 bg-pink-50 rounded-lg border border-pink-100 min-w-[100px] flex-1 sm:flex-none">
+                <span className="text-xs text-pink-600 font-bold uppercase tracking-wider mb-1">Transplants</span>
+                <span className="text-3xl font-black text-pink-900 leading-none">{summaryStats.transplantsCount}</span>
+              </div>
+            </>
+          )}
           <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-fuchsia-600 font-bold uppercase tracking-wider mb-1">Chemo</span>
             <span className="text-3xl font-black text-fuchsia-900 leading-none">{summaryStats.chemoCount}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-cyan-50 rounded-lg border border-cyan-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">IEC</span>
+            <span className="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">ICANS</span>
             <span className="text-3xl font-black text-cyan-900 leading-none">{summaryStats.iecCount}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-teal-50 rounded-lg border border-teal-100 min-w-[100px] flex-1 sm:flex-none">
             <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
             <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
           </div>
+        </div>
+        <div className="flex items-center gap-2 self-start xl:self-center">
+          <button
+            onClick={() => setShiftMode(shiftMode === 'night' ? 'day' : 'night')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold text-sm transition-colors shadow-sm ${
+              shiftMode === 'night'
+                ? 'bg-slate-800 text-amber-200 border-slate-700 hover:bg-slate-700'
+                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+            }`}
+            title={`Switch to ${shiftMode === 'night' ? 'Day' : 'Night'} Shift`}
+          >
+            {shiftMode === 'night' ? <Moon size={16} /> : <Sun size={16} />}
+            {shiftMode === 'night' ? 'Night Shift' : 'Day Shift'}
+          </button>
         </div>
       </header>
 
@@ -714,9 +804,16 @@ export default function App() {
                 <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed opacity-90 mb-3">
                   <li><strong>Success:</strong> Auto-assigned {rationale.stats.assignedCount} patients while preserving {rationale.stats.locked} locked assignments.</li>
                   <li><strong>Chemo Safety:</strong> Placed {rationale.stats.chemo} active Chemo patients with certified RNs.</li>
-                  <li><strong>IEC Safety:</strong> Placed {rationale.stats.iec} active IEC patients with certified RNs.</li>
+                  <li><strong>ICANS Safety:</strong> Placed {rationale.stats.iec} active ICANS patients with certified RNs.</li>
                   <li><strong>Critical Care:</strong> Safely distributed {rationale.stats.acuity4} Acuity 4 patients (Max 1 per RN, capped at 3 patients total).</li>
-                  <li><strong>Admissions:</strong> Assigned {rationale.stats.admits} admits (Max 1 per RN).</li>
+                  {shiftMode === 'night' ? (
+                    <li><strong>Admissions:</strong> Assigned {rationale.stats.admits} admits (Max 1 per RN).</li>
+                  ) : (
+                    <>
+                      <li><strong>Discharges:</strong> Assigned {rationale.stats.discharges ?? 0} discharges (Max 1 per RN).</li>
+                      <li><strong>Transplants:</strong> Assigned {rationale.stats.transplants ?? 0} transplants (Max 1 per RN).</li>
+                    </>
+                  )}
                 </ul>
                 {rationale.unassigned && rationale.unassigned.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-amber-200/60">
@@ -747,7 +844,7 @@ export default function App() {
                   <tr>
                     <th className="px-2 py-2 w-8 text-center"></th>
                     <th className="px-2 py-2 w-16 text-center">No Chemo</th>
-                    <th className="px-2 py-2 w-16 text-center">No IEC</th>
+                    <th className="px-2 py-2 w-16 text-center">No ICANS</th>
                     <th className="px-3 py-2">RN Name</th>
                     <th className="px-3 py-2">Assigned Rooms</th>
                     <th className="px-3 py-2 text-center">Total Acuity</th>
@@ -756,35 +853,49 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {nurses.map((nurse, index) => {
-                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, acuity4Count: 0, wings: new Set() };
+                    const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, discharges: 0, transplants: 0, acuity4Count: 0, wings: new Set() };
 
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
                     const iecWarning = nurse.noIec && stats.hasIec;
                     const patientCountWarning = stats.rooms.length > 4;
-                    const admitWarning = stats.admits > 1;
+                    const admitWarning = shiftMode === 'night' && stats.admits > 1;
+                    const dischargeWarning = shiftMode === 'day' && stats.discharges > 1;
+                    const transplantWarning = shiftMode === 'day' && stats.transplants > 1;
                     const imcWarning = stats.imcs > 0 && stats.rooms.length > 3;
                     const acuity4Warning = stats.acuity4Count > 1;
                     const acuity4LoadWarning = stats.acuity4Count > 0 && stats.rooms.length > 3;
-                    const hasCriticalWarning = chemoWarning || iecWarning || patientCountWarning || admitWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
+                    const hasCriticalWarning = chemoWarning || iecWarning || patientCountWarning || admitWarning || dischargeWarning || transplantWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
 
-                    const admitLoadWarning = stats.admits > 0 && stats.rooms.length > 3;
+                    const admitLoadWarning = shiftMode === 'night' && stats.admits > 0 && stats.rooms.length > 3;
+                    const dischargeLoadWarning = shiftMode === 'day' && stats.discharges > 0 && stats.rooms.length > 3;
+                    const transplantLoadWarning = shiftMode === 'day' && stats.transplants > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
-                    const acuity4WithAdmitWarning = stats.acuity4Count > 0 && stats.admits > 0;
+                    const acuity4WithAdmitWarning = shiftMode === 'night' && stats.acuity4Count > 0 && stats.admits > 0;
+                    const acuity4WithDischargeWarning = shiftMode === 'day' && stats.acuity4Count > 0 && stats.discharges > 0;
+                    const transplantWithDischargeWarning = shiftMode === 'day' && stats.transplants > 0 && stats.discharges > 0;
+                    const transplantWithAcuity4Warning = shiftMode === 'day' && stats.transplants > 0 && stats.acuity4Count > 0 && !stats.rooms.some(r => r.transplant && r.acuity === 4);
                     const crossWingWarning = stats.wings.size > 1;
-                    const hasSoftWarning = (admitLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || crossWingWarning || stats.acuity >= 10) && !hasCriticalWarning;
+                    const hasSoftWarning = (admitLoadWarning || dischargeLoadWarning || transplantLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || acuity4WithDischargeWarning || transplantWithDischargeWarning || transplantWithAcuity4Warning || crossWingWarning || stats.acuity >= 10) && !hasCriticalWarning;
 
                     let tooltipMsgs = [];
                     if (nurse.locked) tooltipMsgs.push("Assignment Locked");
                     if (chemoWarning) tooltipMsgs.push("Non-certified RN assigned to Chemo patient!");
-                    if (iecWarning) tooltipMsgs.push("Non-certified RN assigned to IEC patient!");
+                    if (iecWarning) tooltipMsgs.push("Non-certified RN assigned to ICANS patient!");
                     if (patientCountWarning) tooltipMsgs.push("RN has more than 4 patients!");
                     if (admitWarning) tooltipMsgs.push("RN has more than 1 admit!");
+                    if (dischargeWarning) tooltipMsgs.push("RN has more than 1 discharge!");
+                    if (transplantWarning) tooltipMsgs.push("RN has more than 1 transplant!");
                     if (imcWarning) tooltipMsgs.push("RN with IMC has more than 3 patients!");
                     if (acuity4Warning) tooltipMsgs.push("RN has more than 1 Acuity 4 patient!");
                     if (acuity4LoadWarning) tooltipMsgs.push("RN with Acuity 4 patient has more than 3 patients!");
                     if (admitLoadWarning) tooltipMsgs.push("Soft Limit: RN with an admit has 4 patients.");
+                    if (dischargeLoadWarning) tooltipMsgs.push("Soft Limit: RN with a discharge has 4 patients.");
+                    if (transplantLoadWarning) tooltipMsgs.push("Soft Limit: RN with a transplant has 4 patients.");
                     if (highAcuityWithFour) tooltipMsgs.push("Soft Limit: RN has 4 patients, but not all are Acuity 2.");
                     if (acuity4WithAdmitWarning) tooltipMsgs.push("Soft Limit: Avoid combining Admit with Acuity 4.");
+                    if (acuity4WithDischargeWarning) tooltipMsgs.push("Soft Limit: Avoid combining Discharge with Acuity 4.");
+                    if (transplantWithDischargeWarning) tooltipMsgs.push("Soft Limit: Avoid combining Transplant with Discharge.");
+                    if (transplantWithAcuity4Warning) tooltipMsgs.push("Soft Limit: Avoid combining Transplant with Acuity 4.");
                     if (crossWingWarning) tooltipMsgs.push("Soft Limit: RN has rooms in both wings.");
 
                     let rowClass = 'hover:bg-slate-50 transition-colors duration-150';
@@ -831,7 +942,7 @@ export default function App() {
                             <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
                                 <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
-                                  {(r.admit || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{r.admit && <span className="text-green-600">a</span>}{r.chemo && <span className="text-rose-600">c</span>}{r.iec && <span className="text-cyan-600">e</span>}{r.imc && <span className="text-purple-600">i</span>}</span>}
+                                  {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{shiftMode === 'night' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'day' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'day' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
                                   <span className="font-semibold text-sm leading-none">{r.id}</span>
                                   <span className="font-bold text-[9px] text-slate-500 relative -top-1.5">{r.acuity}</span>
                                 </span>
@@ -867,7 +978,7 @@ export default function App() {
         <div className="w-full md:w-1/2 xl:w-7/12 flex flex-col gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-slate-100 px-4 py-3 border-b border-slate-200"><h2 className="font-semibold text-slate-800 flex items-center gap-2"><MapIcon size={18} className="text-blue-600" />Unit Map</h2></div>
-            <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} />
+            <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} shiftMode={shiftMode} />
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
@@ -886,9 +997,16 @@ export default function App() {
                     <th className="px-3 py-3 w-32">Tx / Diagnosis</th>
                     <th className="px-3 py-3 w-20 text-center">Acuity</th>
                     <th className="px-3 py-3 w-16 text-center">IMC</th>
-                    <th className="px-2 py-3 w-16 text-center">Admit</th>
+                    {shiftMode === 'night' ? (
+                      <th className="px-2 py-3 w-16 text-center">Admit</th>
+                    ) : (
+                      <>
+                        <th className="px-2 py-3 w-16 text-center">D/C</th>
+                        <th className="px-2 py-3 w-16 text-center">Tx</th>
+                      </>
+                    )}
                     <th className="px-3 py-3 w-16 text-center">Chemo</th>
-                    <th className="px-3 py-3 w-16 text-center">IEC</th>
+                    <th className="px-3 py-3 w-16 text-center">ICANS</th>
                     <th className="px-3 py-3 w-16 text-center">CNA</th>
                     <th className="px-3 py-3 w-32">Assigned RN</th>
                     <th className="px-2 py-3 w-10 text-center">Lock</th>
@@ -901,7 +1019,14 @@ export default function App() {
                       <td className="px-2 py-1"><input type="text" className="w-full p-1.5 border border-transparent hover:border-slate-300 rounded bg-transparent focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
                       <td className="px-2 py-1"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-transparent hover:border-slate-300 rounded bg-transparent font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
+                      {shiftMode === 'night' ? (
+                        <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
+                      ) : (
+                        <>
+                          <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer" checked={room.discharge || false} onChange={(e) => updateRoom(index, 'discharge', e.target.checked)} /></td>
+                          <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-pink-600 rounded border-slate-300 cursor-pointer" checked={room.transplant || false} onChange={(e) => updateRoom(index, 'transplant', e.target.checked)} /></td>
+                        </>
+                      )}
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={room.iec || false} onChange={(e) => updateRoom(index, 'iec', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
@@ -934,15 +1059,29 @@ export default function App() {
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity 4 Cap:</strong> Any nurse assigned an Acuity 4 patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">IMC Cap:</strong> Any nurse assigned an IMC patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Single High Acuity:</strong> No nurse will be assigned more than <strong className="text-rose-700">one</strong> Acuity 4 patient.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
+              {shiftMode === 'night' ? (
+                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
+              ) : (
+                <>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Discharge Limit:</strong> No nurse will be assigned more than 1 discharge.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Transplant Limit:</strong> No nurse will be assigned more than 1 transplant.</span></li>
+                </>
+              )}
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Chemo Safety:</strong> Nurses with "No Chemo" checked are strictly excluded from active chemo patients.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">IEC Safety:</strong> Nurses with "No IEC" checked are strictly excluded from active IEC patients.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">ICANS Safety:</strong> Nurses with "No ICANS" checked are strictly excluded from active ICANS patients.</span></li>
             </ul>
           </div>
           <div>
             <h4 className="font-bold text-amber-600 flex items-center gap-2 mb-3 uppercase text-xs tracking-wider"><Wand2 size={14} /> Soft Rules (Optimization Goals)</h4>
             <ul className="space-y-3">
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Admits:</strong> Avoid assigning an admission to a nurse who is caring for an Acuity 4 patient.</span></li>
+              {shiftMode === 'night' ? (
+                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Admits:</strong> Avoid assigning an admission to a nurse who is caring for an Acuity 4 patient.</span></li>
+              ) : (
+                <>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Discharges:</strong> Avoid assigning a discharge to a nurse who is caring for an Acuity 4 patient.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Transplant Pairings:</strong> Avoid combining a transplant with a discharge or a non-transplant Acuity 4 patient on the same nurse.</span></li>
+                </>
+              )}
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Heavy Load Balancing:</strong> Avoid total acuity scores of 10+ and 4th patients on nurses with admissions.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity Distribution:</strong> If a nurse has 4 patients, the system attempts to ensure all patients are Acuity 2 or lower.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Priority Placement:</strong> Hard-to-place patients (Chemo, High Acuity, IMC) are assigned first.</span></li>
@@ -953,10 +1092,17 @@ export default function App() {
         <div className="mt-6 pt-4 border-t border-slate-100 text-xs">
           <strong className="text-slate-700 block mb-2">Visual Indicator Legend:</strong>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500">
-            <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">a</span></span>
-            <span className="flex items-center gap-1">Chemo <span className="font-bold text-[10px] text-rose-600 bg-blue-100 px-1 rounded -mt-1">c</span></span>
-            <span className="flex items-center gap-1">IEC <span className="font-bold text-[10px] text-cyan-600 bg-blue-100 px-1 rounded -mt-1">e</span></span>
-            <span className="flex items-center gap-1">IMC <span className="font-bold text-[10px] text-purple-600 bg-blue-100 px-1 rounded -mt-1">i</span></span>
+            {shiftMode === 'night' ? (
+              <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">A</span></span>
+            ) : (
+              <>
+                <span className="flex items-center gap-1">Discharge <span className="font-bold text-[10px] text-orange-600 bg-blue-100 px-1 rounded -mt-1">D</span></span>
+                <span className="flex items-center gap-1">Transplant <span className="font-bold text-[10px] text-pink-600 bg-blue-100 px-1 rounded -mt-1">T</span></span>
+              </>
+            )}
+            <span className="flex items-center gap-1">Chemo <span className="font-bold text-[10px] text-rose-600 bg-blue-100 px-1 rounded -mt-1">C</span></span>
+            <span className="flex items-center gap-1">ICANS <span className="font-bold text-[10px] text-cyan-600 bg-blue-100 px-1 rounded -mt-1">E</span></span>
+            <span className="flex items-center gap-1">IMC <span className="font-bold text-[10px] text-purple-600 bg-blue-100 px-1 rounded -mt-1">I</span></span>
             <span className="flex items-center gap-1">Acuity <span className="font-bold text-[9px] text-slate-500 bg-blue-100 px-1 rounded -mt-1 ml-0.5">2</span></span>
             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-rose-50 border border-rose-200 inline-block rounded-sm"></span> Rule Violation</span>
             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-amber-50 border border-amber-200 inline-block rounded-sm"></span> Soft Limit Warning</span>

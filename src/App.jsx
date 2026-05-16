@@ -245,6 +245,10 @@ export default function App() {
     return stored.map(r => ({ discharge: false, transplant: false, ...r }));
   });
   const [shiftMode, setShiftMode] = useState(() => loadState('shiftMode', 'day'));
+  const [cnaCount, setCnaCount] = useState(() => {
+    const v = parseInt(loadState('cnaCount', 2), 10);
+    return Number.isFinite(v) && v >= 1 && v <= 4 ? v : 2;
+  });
   const [localInputs, setLocalInputs] = useState({});
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
@@ -267,6 +271,7 @@ export default function App() {
   useEffect(() => { saveState('nurses', nurses); }, [nurses]);
   useEffect(() => { saveState('rooms', rooms); }, [rooms]);
   useEffect(() => { saveState('shiftMode', shiftMode); }, [shiftMode]);
+  useEffect(() => { saveState('cnaCount', cnaCount); }, [cnaCount]);
 
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);
@@ -399,24 +404,62 @@ export default function App() {
   };
 
   const autoAssignCNAs = () => {
-    const newRooms = rooms.map(room => {
-      if (room.locked) return room;                            // Bug fix: respect room lock
-      const isFilled = room.tx && room.tx.trim() !== '';
-      if (!isFilled) return room;                              // Bug fix: skip empty rooms
-      const isAcuity4 = Number(room.acuity) === 4;
-      const isAdmit = shiftMode === 'day' && room.admit;
-      const isDischarge = shiftMode === 'night' && room.discharge;
-      const isTransplant = shiftMode === 'night' && room.transplant;
-      const isNotIndep = room.notIndep;
-      if (isAcuity4 || isAdmit || isDischarge || isTransplant || isNotIndep) {
-        return { ...room, cna: true };
+    const capacityPerCNA = shiftMode === 'day' ? 11 : 7;
+    const totalSlots = cnaCount * capacityPerCNA;
+
+    // Room locks apply to RN assignment only — locked rooms participate in CNA assignment normally.
+    let workingRooms = rooms.map(r => ({ ...r }));
+    const isEligible = (r) => r.tx && r.tx.trim() !== '';
+
+    let usedSlots = workingRooms.filter(r => isEligible(r) && r.cna).length;
+
+    const priorityScore = (r) => {
+      if (Number(r.acuity) === 4) return 5;
+      if (Number(r.acuity) === 3) return 4;
+      if (shiftMode === 'night' && r.transplant) return 3;
+      if (shiftMode === 'night' && r.discharge) return 2;
+      if (shiftMode === 'day' && r.admit) return 1;
+      return 0;
+    };
+
+    const priorityCandidates = workingRooms
+      .map((room, idx) => ({ room, idx, score: priorityScore(room) }))
+      .filter(({ room, score }) => isEligible(room) && !room.cna && score > 0)
+      .sort((a, b) => b.score - a.score || a.idx - b.idx);
+
+    for (const { idx } of priorityCandidates) {
+      if (usedSlots >= totalSlots) break;
+      workingRooms[idx] = { ...workingRooms[idx], cna: true };
+      usedSlots++;
+    }
+
+    // Equity pass: spread leftover slots so no nurse hoards CNAs.
+    const cnaCounts = {};
+    workingRooms.forEach(r => {
+      if (r.rn && r.rn !== '-' && isEligible(r)) {
+        if (!(r.rn in cnaCounts)) cnaCounts[r.rn] = 0;
+        if (r.cna) cnaCounts[r.rn] += 1;
       }
-      return room;
     });
-    setRooms(newRooms);
-    setRationale(shiftMode === 'night'
-      ? "CNAs automatically assigned to all Acuity 4 patients, Discharges, Transplants, and Not Independent patients."
-      : "CNAs automatically assigned to all Acuity 4 patients, Admissions, and Not Independent patients.");
+    const equityCandidates = workingRooms
+      .map((room, idx) => ({ room, idx }))
+      .filter(({ room }) => isEligible(room) && !room.cna && room.rn && room.rn !== '-');
+
+    while (usedSlots < totalSlots && equityCandidates.length > 0) {
+      let bestIdx = 0;
+      for (let i = 1; i < equityCandidates.length; i++) {
+        if ((cnaCounts[equityCandidates[i].room.rn] ?? 0) < (cnaCounts[equityCandidates[bestIdx].room.rn] ?? 0)) {
+          bestIdx = i;
+        }
+      }
+      const chosen = equityCandidates.splice(bestIdx, 1)[0];
+      workingRooms[chosen.idx] = { ...workingRooms[chosen.idx], cna: true };
+      cnaCounts[chosen.room.rn] = (cnaCounts[chosen.room.rn] ?? 0) + 1;
+      usedSlots++;
+    }
+
+    setRooms(workingRooms);
+    setRationale(`Auto CNA: ${cnaCount} CNA${cnaCount === 1 ? '' : 's'} × ${capacityPerCNA} = ${totalSlots} slot${totalSlots === 1 ? '' : 's'}. Filled ${usedSlots} (pre-checked preserved → Acuity 4 → Acuity 3${shiftMode === 'night' ? ' → Transplants → Discharges' : ' → Admits'} → equity across nurses).`);
   };
 
   const clearRooms = () => {
@@ -840,6 +883,24 @@ export default function App() {
               <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Users size={18} className="text-blue-600" />RN Assignment</h2>
               <div className="flex items-center gap-2">
                 <button onClick={autoAssign} className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm" title="Auto-Assign Patients"><Wand2 size={14} />Auto</button>
+                <div className="flex items-stretch rounded-md overflow-hidden shadow-sm">
+                  <button onClick={autoAssignCNAs} className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 text-xs font-medium transition-colors" title="Auto-Assign CNAs"><UserCheck size={14} />Auto CNA</button>
+                  <div className="flex items-center gap-1 bg-teal-50 border border-l-0 border-teal-200 px-2 text-xs text-teal-800">
+                    <span className="font-bold uppercase tracking-wider">CNAs</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="4"
+                      value={cnaCount}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (Number.isFinite(v)) setCnaCount(Math.max(1, Math.min(4, v)));
+                        else setCnaCount(1);
+                      }}
+                      className="w-10 text-center font-bold bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-teal-500 rounded"
+                    />
+                  </div>
+                </div>
                 <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
               </div>
             </div>
@@ -989,7 +1050,6 @@ export default function App() {
             <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
               <h2 className="font-semibold text-slate-800 flex items-center gap-2"><BedDouble size={18} className="text-blue-600" />Patient List</h2>
               <div className="flex items-center gap-2">
-                <button onClick={autoAssignCNAs} className="flex items-center gap-1.5 bg-teal-50 hover:bg-teal-100 text-teal-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-teal-200"><UserCheck size={14} />Auto CNA</button>
                 <button onClick={() => setShowRemixModal(true)} className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-indigo-200"><RefreshCw size={14} />Remix</button>
                 <button onClick={clearRooms} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isClearing ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300'}`}>{isClearing ? <AlertTriangle size={14} /> : <Eraser size={14} />}{isClearing ? "Confirm" : "Reset to Defaults"}</button>
               </div>

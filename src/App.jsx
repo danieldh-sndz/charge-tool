@@ -160,9 +160,9 @@ function UnitMap({ rooms, nurses, hoveredNurse, shiftMode }) {
             : '';
 
           const flags = [];
-          if (isFilled && shiftMode === 'night' && room.admit) flags.push({ label: 'A', color: '#16a34a' });
-          if (isFilled && shiftMode === 'day' && room.discharge) flags.push({ label: 'D', color: '#ea580c' });
-          if (isFilled && shiftMode === 'day' && room.transplant) flags.push({ label: 'T', color: '#db2777' });
+          if (isFilled && shiftMode === 'day' && room.admit) flags.push({ label: 'A', color: '#16a34a' });
+          if (isFilled && shiftMode === 'night' && room.discharge) flags.push({ label: 'D', color: '#ea580c' });
+          if (isFilled && shiftMode === 'night' && room.transplant) flags.push({ label: 'T', color: '#db2777' });
           if (isFilled && room.chemo) flags.push({ label: 'C', color: '#dc2626' });
           if (isFilled && room.iec)   flags.push({ label: 'E', color: '#0891b2' });
           if (isFilled && room.imc)   flags.push({ label: 'I', color: '#7c3aed' });
@@ -244,7 +244,7 @@ export default function App() {
     if (!stored || stored.length !== 32 || stored.some(r => r.room === 'H')) return initialRooms;
     return stored.map(r => ({ discharge: false, transplant: false, ...r }));
   });
-  const [shiftMode, setShiftMode] = useState(() => loadState('shiftMode', 'night'));
+  const [shiftMode, setShiftMode] = useState(() => loadState('shiftMode', 'day'));
   const [localInputs, setLocalInputs] = useState({});
   const [editingRooms, setEditingRooms] = useState(null);
   const [rationale, setRationale] = useState(null);
@@ -374,7 +374,7 @@ export default function App() {
     });
 
     // Assign boolean flags immutably (admit for night shift; discharge + transplant for day shift)
-    if (shiftMode === 'night') {
+    if (shiftMode === 'day') {
       shuffleArray(filledIndices).slice(0, targetAdmits).forEach(idx => {
         nextRooms[idx] = { ...nextRooms[idx], admit: true };
       });
@@ -404,9 +404,9 @@ export default function App() {
       const isFilled = room.tx && room.tx.trim() !== '';
       if (!isFilled) return room;                              // Bug fix: skip empty rooms
       const isAcuity4 = Number(room.acuity) === 4;
-      const isAdmit = shiftMode === 'night' && room.admit;
-      const isDischarge = shiftMode === 'day' && room.discharge;
-      const isTransplant = shiftMode === 'day' && room.transplant;
+      const isAdmit = shiftMode === 'day' && room.admit;
+      const isDischarge = shiftMode === 'night' && room.discharge;
+      const isTransplant = shiftMode === 'night' && room.transplant;
       const isNotIndep = room.notIndep;
       if (isAcuity4 || isAdmit || isDischarge || isTransplant || isNotIndep) {
         return { ...room, cna: true };
@@ -414,7 +414,7 @@ export default function App() {
       return room;
     });
     setRooms(newRooms);
-    setRationale(shiftMode === 'day'
+    setRationale(shiftMode === 'night'
       ? "CNAs automatically assigned to all Acuity 4 patients, Discharges, Transplants, and Not Independent patients."
       : "CNAs automatically assigned to all Acuity 4 patients, Admissions, and Not Independent patients.");
   };
@@ -499,16 +499,16 @@ export default function App() {
       if (a.chemo) scoreA += 100;
       if (a.iec) scoreA += 100;
       if (a.imc) scoreA += 50;
-      if (shiftMode === 'night' && a.admit) scoreA += 25;
-      if (shiftMode === 'day' && a.discharge) scoreA += 25;
-      if (shiftMode === 'day' && a.transplant) scoreA += 30;
+      if (shiftMode === 'day' && a.admit) scoreA += 25;
+      if (shiftMode === 'night' && a.discharge) scoreA += 25;
+      if (shiftMode === 'night' && a.transplant) scoreA += 30;
       let scoreB = Number(b.acuity || 0);
       if (b.chemo) scoreB += 100;
       if (b.iec) scoreB += 100;
       if (b.imc) scoreB += 50;
-      if (shiftMode === 'night' && b.admit) scoreB += 25;
-      if (shiftMode === 'day' && b.discharge) scoreB += 25;
-      if (shiftMode === 'day' && b.transplant) scoreB += 30;
+      if (shiftMode === 'day' && b.admit) scoreB += 25;
+      if (shiftMode === 'night' && b.discharge) scoreB += 25;
+      if (shiftMode === 'night' && b.transplant) scoreB += 30;
       return scoreB - scoreA;
     });
 
@@ -520,11 +520,11 @@ export default function App() {
     const getNurseLoadScore = (nurse, roomAcuity, isAdmit, isDischarge, isTransplant, roomWing) => {
       let score = (nurse.patients * 3.5) + nurse.acuity;
       if (nurse.acuity + roomAcuity >= 10) score += 100;
-      if (shiftMode === 'night') {
+      if (shiftMode === 'day') {
         if ((nurse.acuity4Count > 0 && isAdmit) || (nurse.admits > 0 && roomAcuity === 4)) score += 50;
         if (nurse.patients === 3 && (nurse.admits > 0 || isAdmit)) score += 25;
       }
-      if (shiftMode === 'day') {
+      if (shiftMode === 'night') {
         // Discharge mirrors admit: avoid pairing with acuity 4
         if ((nurse.acuity4Count > 0 && isDischarge) || (nurse.discharges > 0 && roomAcuity === 4)) score += 50;
         if (nurse.patients === 3 && (nurse.discharges > 0 || isDischarge)) score += 25;
@@ -543,9 +543,9 @@ export default function App() {
     activeRooms.forEach(room => {
       const roomAcuity = Number(room.acuity || 0);
       const roomWing = getRoomWing(room.room);
-      const isAdmit = shiftMode === 'night' && room.admit;
-      const isDischarge = shiftMode === 'day' && room.discharge;
-      const isTransplant = shiftMode === 'day' && room.transplant;
+      const isAdmit = shiftMode === 'day' && room.admit;
+      const isDischarge = shiftMode === 'night' && room.discharge;
+      const isTransplant = shiftMode === 'night' && room.transplant;
       const isChemo = room.chemo, isImc = room.imc, isIec = room.iec;
       let eligible = Object.values(nurseLoads).filter(n => {
         if (n.isLocked || n.patients >= 4) return false;
@@ -685,7 +685,7 @@ export default function App() {
                   <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Acuity 3s</label>
                   <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.acuity3} onChange={(e) => setRemixCounts({...remixCounts, acuity3: e.target.value})} />
                 </div>
-                {shiftMode === 'night' ? (
+                {shiftMode === 'day' ? (
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Admissions</label>
                     <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.admits} onChange={(e) => setRemixCounts({...remixCounts, admits: e.target.value})} />
@@ -748,7 +748,7 @@ export default function App() {
             <span className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">IMC</span>
             <span className="text-3xl font-black text-blue-900 leading-none">{summaryStats.imcCount}</span>
           </div>
-          {shiftMode === 'night' ? (
+          {shiftMode === 'day' ? (
             <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
               <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Admits</span>
               <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.admitsCount}</span>
@@ -778,19 +778,24 @@ export default function App() {
             <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start xl:self-center">
+        <div className="flex items-center gap-3 self-start xl:self-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+          <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'day' ? 'text-amber-600' : 'text-slate-400'}`}>
+            <Sun size={14} /> Day
+          </span>
           <button
-            onClick={() => setShiftMode(shiftMode === 'night' ? 'day' : 'night')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold text-sm transition-colors shadow-sm ${
-              shiftMode === 'night'
-                ? 'bg-slate-800 text-amber-200 border-slate-700 hover:bg-slate-700'
-                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
-            }`}
-            title={`Switch to ${shiftMode === 'night' ? 'Day' : 'Night'} Shift`}
+            type="button"
+            role="switch"
+            aria-checked={shiftMode === 'night'}
+            aria-label="Toggle shift"
+            onClick={() => setShiftMode(shiftMode === 'day' ? 'night' : 'day')}
+            className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-400 ${shiftMode === 'night' ? 'bg-indigo-600' : 'bg-amber-400'}`}
+            title={`Switch to ${shiftMode === 'day' ? 'Night' : 'Day'} Shift`}
           >
-            {shiftMode === 'night' ? <Moon size={16} /> : <Sun size={16} />}
-            {shiftMode === 'night' ? 'Night Shift' : 'Day Shift'}
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transform transition-transform ${shiftMode === 'night' ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
+          <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'night' ? 'text-indigo-600' : 'text-slate-400'}`}>
+            <Moon size={14} /> Night
+          </span>
         </div>
       </header>
 
@@ -806,7 +811,7 @@ export default function App() {
                   <li><strong>Chemo Safety:</strong> Placed {rationale.stats.chemo} active Chemo patients with certified RNs.</li>
                   <li><strong>ICANS Safety:</strong> Placed {rationale.stats.iec} active ICANS patients with certified RNs.</li>
                   <li><strong>Critical Care:</strong> Safely distributed {rationale.stats.acuity4} Acuity 4 patients (Max 1 per RN, capped at 3 patients total).</li>
-                  {shiftMode === 'night' ? (
+                  {shiftMode === 'day' ? (
                     <li><strong>Admissions:</strong> Assigned {rationale.stats.admits} admits (Max 1 per RN).</li>
                   ) : (
                     <>
@@ -858,22 +863,22 @@ export default function App() {
                     const chemoWarning = nurse.noChemo && stats.hasChemo;
                     const iecWarning = nurse.noIec && stats.hasIec;
                     const patientCountWarning = stats.rooms.length > 4;
-                    const admitWarning = shiftMode === 'night' && stats.admits > 1;
-                    const dischargeWarning = shiftMode === 'day' && stats.discharges > 1;
-                    const transplantWarning = shiftMode === 'day' && stats.transplants > 1;
+                    const admitWarning = shiftMode === 'day' && stats.admits > 1;
+                    const dischargeWarning = shiftMode === 'night' && stats.discharges > 1;
+                    const transplantWarning = shiftMode === 'night' && stats.transplants > 1;
                     const imcWarning = stats.imcs > 0 && stats.rooms.length > 3;
                     const acuity4Warning = stats.acuity4Count > 1;
                     const acuity4LoadWarning = stats.acuity4Count > 0 && stats.rooms.length > 3;
                     const hasCriticalWarning = chemoWarning || iecWarning || patientCountWarning || admitWarning || dischargeWarning || transplantWarning || imcWarning || acuity4Warning || acuity4LoadWarning;
 
-                    const admitLoadWarning = shiftMode === 'night' && stats.admits > 0 && stats.rooms.length > 3;
-                    const dischargeLoadWarning = shiftMode === 'day' && stats.discharges > 0 && stats.rooms.length > 3;
-                    const transplantLoadWarning = shiftMode === 'day' && stats.transplants > 0 && stats.rooms.length > 3;
+                    const admitLoadWarning = shiftMode === 'day' && stats.admits > 0 && stats.rooms.length > 3;
+                    const dischargeLoadWarning = shiftMode === 'night' && stats.discharges > 0 && stats.rooms.length > 3;
+                    const transplantLoadWarning = shiftMode === 'night' && stats.transplants > 0 && stats.rooms.length > 3;
                     const highAcuityWithFour = stats.rooms.length === 4 && stats.rooms.some(r => r.acuity > 2);
-                    const acuity4WithAdmitWarning = shiftMode === 'night' && stats.acuity4Count > 0 && stats.admits > 0;
-                    const acuity4WithDischargeWarning = shiftMode === 'day' && stats.acuity4Count > 0 && stats.discharges > 0;
-                    const transplantWithDischargeWarning = shiftMode === 'day' && stats.transplants > 0 && stats.discharges > 0;
-                    const transplantWithAcuity4Warning = shiftMode === 'day' && stats.transplants > 0 && stats.acuity4Count > 0 && !stats.rooms.some(r => r.transplant && r.acuity === 4);
+                    const acuity4WithAdmitWarning = shiftMode === 'day' && stats.acuity4Count > 0 && stats.admits > 0;
+                    const acuity4WithDischargeWarning = shiftMode === 'night' && stats.acuity4Count > 0 && stats.discharges > 0;
+                    const transplantWithDischargeWarning = shiftMode === 'night' && stats.transplants > 0 && stats.discharges > 0;
+                    const transplantWithAcuity4Warning = shiftMode === 'night' && stats.transplants > 0 && stats.acuity4Count > 0 && !stats.rooms.some(r => r.transplant && r.acuity === 4);
                     const crossWingWarning = stats.wings.size > 1;
                     const hasSoftWarning = (admitLoadWarning || dischargeLoadWarning || transplantLoadWarning || highAcuityWithFour || acuity4WithAdmitWarning || acuity4WithDischargeWarning || transplantWithDischargeWarning || transplantWithAcuity4Warning || crossWingWarning || stats.acuity >= 10) && !hasCriticalWarning;
 
@@ -942,7 +947,7 @@ export default function App() {
                             <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
                                 <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
-                                  {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{shiftMode === 'night' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'day' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'day' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
+                                  {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{shiftMode === 'day' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'night' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'night' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
                                   <span className="font-semibold text-sm leading-none">{r.id}</span>
                                   <span className="font-bold text-[9px] text-slate-500 relative -top-1.5">{r.acuity}</span>
                                 </span>
@@ -997,7 +1002,7 @@ export default function App() {
                     <th className="px-3 py-3 w-32">Tx / Diagnosis</th>
                     <th className="px-3 py-3 w-20 text-center">Acuity</th>
                     <th className="px-3 py-3 w-16 text-center">IMC</th>
-                    {shiftMode === 'night' ? (
+                    {shiftMode === 'day' ? (
                       <th className="px-2 py-3 w-16 text-center">Admit</th>
                     ) : (
                       <>
@@ -1019,7 +1024,7 @@ export default function App() {
                       <td className="px-2 py-1"><input type="text" className="w-full p-1.5 border border-transparent hover:border-slate-300 rounded bg-transparent focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
                       <td className="px-2 py-1"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-transparent hover:border-slate-300 rounded bg-transparent font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
-                      {shiftMode === 'night' ? (
+                      {shiftMode === 'day' ? (
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
                       ) : (
                         <>
@@ -1059,7 +1064,7 @@ export default function App() {
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity 4 Cap:</strong> Any nurse assigned an Acuity 4 patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">IMC Cap:</strong> Any nurse assigned an IMC patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
               <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Single High Acuity:</strong> No nurse will be assigned more than <strong className="text-rose-700">one</strong> Acuity 4 patient.</span></li>
-              {shiftMode === 'night' ? (
+              {shiftMode === 'day' ? (
                 <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
               ) : (
                 <>
@@ -1074,7 +1079,7 @@ export default function App() {
           <div>
             <h4 className="font-bold text-amber-600 flex items-center gap-2 mb-3 uppercase text-xs tracking-wider"><Wand2 size={14} /> Soft Rules (Optimization Goals)</h4>
             <ul className="space-y-3">
-              {shiftMode === 'night' ? (
+              {shiftMode === 'day' ? (
                 <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Admits:</strong> Avoid assigning an admission to a nurse who is caring for an Acuity 4 patient.</span></li>
               ) : (
                 <>
@@ -1092,7 +1097,7 @@ export default function App() {
         <div className="mt-6 pt-4 border-t border-slate-100 text-xs">
           <strong className="text-slate-700 block mb-2">Visual Indicator Legend:</strong>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500">
-            {shiftMode === 'night' ? (
+            {shiftMode === 'day' ? (
               <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">A</span></span>
             ) : (
               <>

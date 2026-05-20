@@ -268,10 +268,16 @@ export default function App() {
     };
   }, []);
 
+  const [isDarkMode, setIsDarkMode] = useState(() => loadState('darkMode', false));
+
   useEffect(() => { saveState('nurses', nurses); }, [nurses]);
   useEffect(() => { saveState('rooms', rooms); }, [rooms]);
   useEffect(() => { saveState('shiftMode', shiftMode); }, [shiftMode]);
   useEffect(() => { saveState('cnaCount', cnaCount); }, [cnaCount]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+    saveState('darkMode', isDarkMode);
+  }, [isDarkMode]);
 
   // Remix Modal State
   const [showRemixModal, setShowRemixModal] = useState(false);
@@ -701,12 +707,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6 font-sans text-slate-800 pb-20 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-6 font-sans text-slate-800 dark:text-slate-100 pb-20 relative">
 
       {/* Remix Modal */}
       {showRemixModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
               <h3 className="text-white font-bold text-lg flex items-center gap-2">
                 <RefreshCw size={20} />
@@ -718,46 +724,46 @@ export default function App() {
             </div>
 
             <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600 mb-2">Set target counts for the randomizer (approximate):</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Set target counts for the randomizer (approximate):</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Acuity 4s</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.acuity4} onChange={(e) => setRemixCounts({...remixCounts, acuity4: e.target.value})} />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Acuity 4s</label>
+                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.acuity4} onChange={(e) => setRemixCounts({...remixCounts, acuity4: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Acuity 3s</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.acuity3} onChange={(e) => setRemixCounts({...remixCounts, acuity3: e.target.value})} />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Acuity 3s</label>
+                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.acuity3} onChange={(e) => setRemixCounts({...remixCounts, acuity3: e.target.value})} />
                 </div>
                 {shiftMode === 'day' ? (
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Admissions</label>
-                    <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.admits} onChange={(e) => setRemixCounts({...remixCounts, admits: e.target.value})} />
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Admissions</label>
+                    <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.admits} onChange={(e) => setRemixCounts({...remixCounts, admits: e.target.value})} />
                   </div>
                 ) : (
                   <>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Discharges</label>
-                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.discharges} onChange={(e) => setRemixCounts({...remixCounts, discharges: e.target.value})} />
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Discharges</label>
+                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.discharges} onChange={(e) => setRemixCounts({...remixCounts, discharges: e.target.value})} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Transplants</label>
-                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.transplants} onChange={(e) => setRemixCounts({...remixCounts, transplants: e.target.value})} />
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Transplants</label>
+                      <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.transplants} onChange={(e) => setRemixCounts({...remixCounts, transplants: e.target.value})} />
                     </div>
                   </>
                 )}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Chemo Pts</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.chemo} onChange={(e) => setRemixCounts({...remixCounts, chemo: e.target.value})} />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">Chemo Pts</label>
+                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.chemo} onChange={(e) => setRemixCounts({...remixCounts, chemo: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">ICANS Pts</label>
-                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md" value={remixCounts.iec} onChange={(e) => setRemixCounts({...remixCounts, iec: e.target.value})} />
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase">ICANS Pts</label>
+                  <input type="number" min="0" max="30" className="w-full p-2 border rounded-md bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100" value={remixCounts.iec} onChange={(e) => setRemixCounts({...remixCounts, iec: e.target.value})} />
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-50 px-6 py-4 flex justify-end gap-3 border-t border-slate-200">
-              <button onClick={() => setShowRemixModal(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+            <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-4 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-600">
+              <button onClick={() => setShowRemixModal(false)} className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
               <button onClick={applyRemix} className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">Generate List</button>
             </div>
           </div>
@@ -765,80 +771,91 @@ export default function App() {
       )}
 
       {/* Header / Summary */}
-      <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 gap-4">
+      <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4">
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-          <div className="flex flex-col items-center justify-center p-3 bg-red-50 rounded-lg border border-red-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-red-600 font-bold uppercase tracking-wider mb-1">Nurses</span>
-            <span className="text-3xl font-black text-red-900 leading-none">{summaryStats.activeNursesCount}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-red-50 dark:bg-slate-700 rounded-lg border border-red-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider mb-1">Nurses</span>
+            <span className="text-3xl font-black text-red-900 dark:text-red-200 leading-none">{summaryStats.activeNursesCount}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-orange-50 rounded-lg border border-orange-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-orange-600 font-bold uppercase tracking-wider mb-1">Census</span>
-            <span className="text-3xl font-black text-orange-900 leading-none">{summaryStats.census}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-orange-50 dark:bg-slate-700 rounded-lg border border-orange-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider mb-1">Census</span>
+            <span className="text-3xl font-black text-orange-900 dark:text-orange-200 leading-none">{summaryStats.census}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-amber-50 rounded-lg border border-amber-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-amber-600 font-bold uppercase tracking-wider mb-1">Total Acuity</span>
-            <span className="text-3xl font-black text-amber-900 leading-none">{summaryStats.totalAcuity}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-amber-50 dark:bg-slate-700 rounded-lg border border-amber-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">Total Acuity</span>
+            <span className="text-3xl font-black text-amber-900 dark:text-amber-200 leading-none">{summaryStats.totalAcuity}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-green-50 rounded-lg border border-green-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-green-600 font-bold uppercase tracking-wider mb-1">Acuity 4</span>
-            <span className="text-3xl font-black text-green-900 leading-none">{summaryStats.acuity4Count}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-green-50 dark:bg-slate-700 rounded-lg border border-green-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1">Acuity 4</span>
+            <span className="text-3xl font-black text-green-900 dark:text-green-200 leading-none">{summaryStats.acuity4Count}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-lime-50 rounded-lg border border-lime-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-lime-600 font-bold uppercase tracking-wider mb-1">Acuity 3</span>
-            <span className="text-3xl font-black text-lime-900 leading-none">{summaryStats.acuity3Count}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-lime-50 dark:bg-slate-700 rounded-lg border border-lime-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-lime-600 dark:text-lime-400 font-bold uppercase tracking-wider mb-1">Acuity 3</span>
+            <span className="text-3xl font-black text-lime-900 dark:text-lime-200 leading-none">{summaryStats.acuity3Count}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-blue-50 rounded-lg border border-blue-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-1">IMC</span>
-            <span className="text-3xl font-black text-blue-900 leading-none">{summaryStats.imcCount}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-blue-50 dark:bg-slate-700 rounded-lg border border-blue-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">IMC</span>
+            <span className="text-3xl font-black text-blue-900 dark:text-blue-200 leading-none">{summaryStats.imcCount}</span>
           </div>
           {shiftMode === 'day' ? (
-            <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-lg border border-indigo-100 min-w-[100px] flex-1 sm:flex-none">
-              <span className="text-xs text-indigo-600 font-bold uppercase tracking-wider mb-1">Admits</span>
-              <span className="text-3xl font-black text-indigo-900 leading-none">{summaryStats.admitsCount}</span>
+            <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 dark:bg-slate-700 rounded-lg border border-indigo-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-1">Admits</span>
+              <span className="text-3xl font-black text-indigo-900 dark:text-indigo-200 leading-none">{summaryStats.admitsCount}</span>
             </div>
           ) : (
             <>
-              <div className="flex flex-col items-center justify-center p-3 bg-orange-50 rounded-lg border border-orange-100 min-w-[100px] flex-1 sm:flex-none">
-                <span className="text-xs text-orange-600 font-bold uppercase tracking-wider mb-1">Discharges</span>
-                <span className="text-3xl font-black text-orange-900 leading-none">{summaryStats.dischargesCount}</span>
+              <div className="flex flex-col items-center justify-center p-3 bg-orange-50 dark:bg-slate-700 rounded-lg border border-orange-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+                <span className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider mb-1">Discharges</span>
+                <span className="text-3xl font-black text-orange-900 dark:text-orange-200 leading-none">{summaryStats.dischargesCount}</span>
               </div>
-              <div className="flex flex-col items-center justify-center p-3 bg-pink-50 rounded-lg border border-pink-100 min-w-[100px] flex-1 sm:flex-none">
-                <span className="text-xs text-pink-600 font-bold uppercase tracking-wider mb-1">Transplants</span>
-                <span className="text-3xl font-black text-pink-900 leading-none">{summaryStats.transplantsCount}</span>
+              <div className="flex flex-col items-center justify-center p-3 bg-pink-50 dark:bg-slate-700 rounded-lg border border-pink-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+                <span className="text-xs text-pink-600 dark:text-pink-400 font-bold uppercase tracking-wider mb-1">Transplants</span>
+                <span className="text-3xl font-black text-pink-900 dark:text-pink-200 leading-none">{summaryStats.transplantsCount}</span>
               </div>
             </>
           )}
-          <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-fuchsia-600 font-bold uppercase tracking-wider mb-1">Chemo</span>
-            <span className="text-3xl font-black text-fuchsia-900 leading-none">{summaryStats.chemoCount}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 dark:bg-slate-700 rounded-lg border border-fuchsia-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-fuchsia-600 dark:text-fuchsia-400 font-bold uppercase tracking-wider mb-1">Chemo</span>
+            <span className="text-3xl font-black text-fuchsia-900 dark:text-fuchsia-200 leading-none">{summaryStats.chemoCount}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-cyan-50 rounded-lg border border-cyan-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-cyan-600 font-bold uppercase tracking-wider mb-1">ICANS</span>
-            <span className="text-3xl font-black text-cyan-900 leading-none">{summaryStats.iecCount}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-cyan-50 dark:bg-slate-700 rounded-lg border border-cyan-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-wider mb-1">ICANS</span>
+            <span className="text-3xl font-black text-cyan-900 dark:text-cyan-200 leading-none">{summaryStats.iecCount}</span>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 bg-teal-50 rounded-lg border border-teal-100 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-teal-600 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
-            <span className="text-3xl font-black text-teal-900 leading-none">{summaryStats.cnaCount}</span>
+          <div className="flex flex-col items-center justify-center p-3 bg-teal-50 dark:bg-slate-700 rounded-lg border border-teal-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
+            <span className="text-xs text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
+            <span className="text-3xl font-black text-teal-900 dark:text-teal-200 leading-none">{summaryStats.cnaCount}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3 self-start xl:self-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
-          <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'day' ? 'text-amber-600' : 'text-slate-400'}`}>
-            <Sun size={14} /> Day
-          </span>
+        <div className="flex items-center gap-3 self-start xl:self-center flex-wrap">
           <button
             type="button"
-            role="switch"
-            aria-checked={shiftMode === 'night'}
-            aria-label="Toggle shift"
-            onClick={() => setShiftMode(shiftMode === 'day' ? 'night' : 'day')}
-            className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-400 ${shiftMode === 'night' ? 'bg-indigo-600' : 'bg-amber-400'}`}
-            title={`Switch to ${shiftMode === 'day' ? 'Night' : 'Day'} Shift`}
+            aria-label="Toggle dark mode"
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
           >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transform transition-transform ${shiftMode === 'night' ? 'translate-x-5' : 'translate-x-0'}`} />
+            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
-          <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'night' ? 'text-indigo-600' : 'text-slate-400'}`}>
-            <Moon size={14} /> Night
-          </span>
+          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-700 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600">
+            <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'day' ? 'text-amber-600' : 'text-slate-400 dark:text-slate-500'}`}>
+              <Sun size={14} /> Day
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={shiftMode === 'night'}
+              aria-label="Toggle shift"
+              onClick={() => setShiftMode(shiftMode === 'day' ? 'night' : 'day')}
+              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-400 ${shiftMode === 'night' ? 'bg-indigo-600' : 'bg-amber-400'}`}
+              title={`Switch to ${shiftMode === 'day' ? 'Night' : 'Day'} Shift`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transform transition-transform ${shiftMode === 'night' ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+            <span className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${shiftMode === 'night' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+              <Moon size={14} /> Night
+            </span>
+          </div>
         </div>
       </header>
 
@@ -878,14 +895,14 @@ export default function App() {
 
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
         <div className="w-full md:w-1/2 xl:w-5/12 flex flex-col gap-4 md:sticky md:top-4 z-20">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="font-semibold text-slate-800 flex items-center gap-2"><Users size={18} className="text-blue-600" />RN Assignment</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Users size={18} className="text-blue-600 dark:text-blue-400" />RN Assignment</h2>
               <div className="flex items-center gap-2">
                 <button onClick={autoAssign} className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-colors shadow-sm" title="Auto-Assign Patients"><Wand2 size={14} />Auto</button>
                 <div className="flex items-stretch rounded-md overflow-hidden shadow-sm">
                   <button onClick={autoAssignCNAs} className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 text-xs font-medium transition-colors" title="Auto-Assign CNAs"><UserCheck size={14} />Auto CNA</button>
-                  <div className="flex items-center gap-1 bg-teal-50 border border-l-0 border-teal-200 px-2 text-xs text-teal-800">
+                  <div className="flex items-center gap-1 bg-teal-50 dark:bg-teal-900/30 border border-l-0 border-teal-200 dark:border-teal-700 px-2 text-xs text-teal-800 dark:text-teal-300">
                     <span className="font-bold uppercase tracking-wider">CNAs</span>
                     <input
                       type="number"
@@ -901,12 +918,12 @@ export default function App() {
                     />
                   </div>
                 </div>
-                <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:bg-slate-50'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
+                <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white dark:bg-slate-600 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-500'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                   <tr>
                     <th className="px-2 py-2 w-8 text-center"></th>
                     <th className="px-2 py-2 w-16 text-center">No Chemo</th>
@@ -917,7 +934,7 @@ export default function App() {
                     <th className="px-2 py-2 w-8"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {nurses.map((nurse, index) => {
                     const stats = nurseStats[nurse.name] || { rooms: [], acuity: 0, hasChemo: false, hasIec: false, imcs: 0, admits: 0, discharges: 0, transplants: 0, acuity4Count: 0, wings: new Set() };
 
@@ -964,10 +981,10 @@ export default function App() {
                     if (transplantWithAcuity4Warning) tooltipMsgs.push("Soft Limit: Avoid combining Transplant with Acuity 4.");
                     if (crossWingWarning) tooltipMsgs.push("Soft Limit: RN has rooms in both wings.");
 
-                    let rowClass = 'hover:bg-slate-50 transition-colors duration-150';
-                    if (hasCriticalWarning) rowClass = 'bg-rose-50 hover:bg-rose-100';
-                    else if (hasSoftWarning) rowClass = 'bg-amber-50 hover:bg-amber-100';
-                    else if (nurse.locked) rowClass = 'bg-purple-50 hover:bg-purple-100';
+                    let rowClass = 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150';
+                    if (hasCriticalWarning) rowClass = 'bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30';
+                    else if (hasSoftWarning) rowClass = 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30';
+                    else if (nurse.locked) rowClass = 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30';
 
                     const nameClass = hasCriticalWarning ? 'text-rose-700' : (hasSoftWarning ? 'text-amber-700' : (nurse.locked ? 'text-purple-700 font-semibold' : ''));
                     let acuityClass = 'text-slate-400';
@@ -981,13 +998,13 @@ export default function App() {
                         <td className="px-2 py-1 text-center"><button onClick={() => toggleNurseLock(index)} className={`p-1 rounded-md transition-colors ${nurse.locked ? 'text-purple-600' : 'text-slate-300 hover:text-slate-500'}`}>{nurse.locked ? <Lock size={14} /> : <Unlock size={14} />}</button></td>
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={nurse.noChemo || false} onChange={(e) => updateNurse(index, 'noChemo', e.target.checked)} /></td>
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={nurse.noIec || false} onChange={(e) => updateNurse(index, 'noIec', e.target.checked)} /></td>
-                        <td className="px-2 py-1"><input type="text" className={`w-full p-1 border-none bg-transparent hover:bg-slate-100 rounded font-medium focus:ring-1 focus:ring-blue-500 ${nameClass}`} value={nurse.name} onChange={(e) => updateNurse(index, 'name', e.target.value)} placeholder="Name..." /></td>
+                        <td className="px-2 py-1"><input type="text" className={`w-full p-1 border-none bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700 rounded font-medium focus:ring-1 focus:ring-blue-500 dark:placeholder-slate-500 ${nameClass}`} value={nurse.name} onChange={(e) => updateNurse(index, 'name', e.target.value)} placeholder="Name..." /></td>
                         <td className="px-2 py-1 cursor-pointer group" onClick={() => { if (nurse.name) setEditingRooms(nurse.id); }}>
                           {editingRooms === nurse.id ? (
                             <input
                               autoFocus
                               type="text"
-                              className="w-full p-1 border border-blue-500 focus:ring-1 focus:ring-blue-500 rounded bg-white text-sm shadow-sm"
+                              className="w-full p-1 border border-blue-500 focus:ring-1 focus:ring-blue-500 rounded bg-white dark:bg-slate-700 dark:text-slate-100 text-sm shadow-sm"
                               value={localInputs[nurse.id] !== undefined ? localInputs[nurse.id] : stats.rooms.map(r => r.id).join(', ')}
                               onChange={(e) => setLocalInputs(prev => ({ ...prev, [nurse.id]: e.target.value }))}
                               onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
@@ -1005,7 +1022,7 @@ export default function App() {
                               }}
                             />
                           ) : (
-                            <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 transition-colors">
+                            <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 dark:group-hover:bg-slate-700 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
                                 <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
                                   {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{shiftMode === 'day' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'night' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'night' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
@@ -1023,11 +1040,11 @@ export default function App() {
                       </tr>
                     );
                   })}
-                  <tr className="border-t border-slate-200 bg-slate-50">
+                  <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <td colSpan={7} className="px-3 py-2">
                       <input
                         type="text"
-                        className="w-full bg-transparent text-sm placeholder-slate-400 focus:outline-none"
+                        className="w-full bg-transparent text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none dark:text-slate-200"
                         placeholder="+ Add a nurse..."
                         value={newNurseName}
                         onChange={(e) => setNewNurseName(e.target.value)}
@@ -1042,21 +1059,21 @@ export default function App() {
         </div>
 
         <div className="w-full md:w-1/2 xl:w-7/12 flex flex-col gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-100 px-4 py-3 border-b border-slate-200"><h2 className="font-semibold text-slate-800 flex items-center gap-2"><MapIcon size={18} className="text-blue-600" />Unit Map</h2></div>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600"><h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><MapIcon size={18} className="text-blue-600 dark:text-blue-400" />Unit Map</h2></div>
             <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} shiftMode={shiftMode} />
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-              <h2 className="font-semibold text-slate-800 flex items-center gap-2"><BedDouble size={18} className="text-blue-600" />Patient List</h2>
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">
+              <h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><BedDouble size={18} className="text-blue-600 dark:text-blue-400" />Patient List</h2>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowRemixModal(true)} className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-indigo-200"><RefreshCw size={14} />Remix</button>
-                <button onClick={clearRooms} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isClearing ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300'}`}>{isClearing ? <AlertTriangle size={14} /> : <Eraser size={14} />}{isClearing ? "Confirm" : "Reset to Defaults"}</button>
+                <button onClick={() => setShowRemixModal(true)} className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border border-indigo-200 dark:border-indigo-700"><RefreshCw size={14} />Remix</button>
+                <button onClick={clearRooms} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors border ${isClearing ? 'bg-rose-600 text-white border-rose-700 hover:bg-rose-700' : 'bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-500 hover:bg-rose-100 hover:text-rose-700 hover:border-rose-300'}`}>{isClearing ? <AlertTriangle size={14} /> : <Eraser size={14} />}{isClearing ? "Confirm" : "Reset to Defaults"}</button>
               </div>
             </div>
             <div>
               <table className="w-full text-sm text-left relative">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 sticky top-0 z-10 shadow-sm">
                   <tr>
                     <th className="px-3 py-3 w-16 text-center">Room</th>
                     <th className="px-3 py-3 w-32">Tx / Diagnosis</th>
@@ -1077,12 +1094,12 @@ export default function App() {
                     <th className="px-2 py-3 w-10 text-center">Lock</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {rooms.map((room, index) => (
-                    <tr key={room.room} className={`hover:bg-slate-50 ${room.rn !== '-' ? 'bg-slate-50/50' : ''}`}>
-                      <td className="px-3 py-1 text-center font-medium text-slate-700">{room.room}</td>
-                      <td className="px-2 py-1"><input type="text" className="w-full p-1.5 border border-transparent hover:border-slate-300 rounded bg-transparent focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
-                      <td className="px-2 py-1"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-transparent hover:border-slate-300 rounded bg-transparent font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
+                    <tr key={room.room} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${room.rn !== '-' ? 'bg-slate-50/50 dark:bg-slate-700/20' : ''}`}>
+                      <td className="px-3 py-1 text-center font-medium text-slate-700 dark:text-slate-300">{room.room}</td>
+                      <td className="px-2 py-1"><input type="text" className="w-full p-1.5 border border-transparent hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 dark:placeholder-slate-500 focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
+                      <td className="px-2 py-1"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-transparent hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
                       {shiftMode === 'day' ? (
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
@@ -1096,7 +1113,7 @@ export default function App() {
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={room.iec || false} onChange={(e) => updateRoom(index, 'iec', e.target.checked)} /></td>
                       <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
                       <td className="px-2 py-1">
-                        <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-white border-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>
+                        <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 dark:text-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>
                           <option value="-">- Unassigned -</option>
                           {nurses.filter(n => n.name.trim() !== '').map(nurse => <option key={nurse.id} value={nurse.name}>{nurse.name}</option>)}
                         </select>
@@ -1111,52 +1128,52 @@ export default function App() {
         </div>
       </div>
 
-      <div className="mt-8 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
-          <ListChecks size={20} className="text-slate-500" />
+      <div className="mt-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+        <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-4 border-b border-slate-100 dark:border-slate-700 pb-3">
+          <ListChecks size={20} className="text-slate-500 dark:text-slate-400" />
           Assignment Parameters & Guidelines
         </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-600">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-sm text-slate-600 dark:text-slate-400">
           <div>
             <h4 className="font-bold text-rose-700 flex items-center gap-2 mb-3 uppercase text-xs tracking-wider"><Lock size={14} /> Hard Rules (Strict Limits)</h4>
             <ul className="space-y-3">
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Max 4 Patients:</strong> No nurse will ever be assigned more than 4 patients.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity 4 Cap:</strong> Any nurse assigned an Acuity 4 patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">IMC Cap:</strong> Any nurse assigned an IMC patient is strictly limited to <strong className="text-rose-700">3 patients maximum</strong>.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Single High Acuity:</strong> No nurse will be assigned more than <strong className="text-rose-700">one</strong> Acuity 4 patient.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Max 4 Patients:</strong> No nurse will ever be assigned more than 4 patients.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Acuity 4 Cap:</strong> Any nurse assigned an Acuity 4 patient is strictly limited to <strong className="text-rose-700 dark:text-rose-400">3 patients maximum</strong>.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">IMC Cap:</strong> Any nurse assigned an IMC patient is strictly limited to <strong className="text-rose-700 dark:text-rose-400">3 patients maximum</strong>.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Single High Acuity:</strong> No nurse will be assigned more than <strong className="text-rose-700 dark:text-rose-400">one</strong> Acuity 4 patient.</span></li>
               {shiftMode === 'day' ? (
-                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
+                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Admit Limit:</strong> No nurse will be assigned more than 1 admission.</span></li>
               ) : (
                 <>
-                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Discharge Limit:</strong> No nurse will be assigned more than 1 discharge.</span></li>
-                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Transplant Limit:</strong> No nurse will be assigned more than 1 transplant.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Discharge Limit:</strong> No nurse will be assigned more than 1 discharge.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Transplant Limit:</strong> No nurse will be assigned more than 1 transplant.</span></li>
                 </>
               )}
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Chemo Safety:</strong> Nurses with "No Chemo" checked are strictly excluded from active chemo patients.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">ICANS Safety:</strong> Nurses with "No ICANS" checked are strictly excluded from active ICANS patients.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Chemo Safety:</strong> Nurses with "No Chemo" checked are strictly excluded from active chemo patients.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">ICANS Safety:</strong> Nurses with "No ICANS" checked are strictly excluded from active ICANS patients.</span></li>
             </ul>
           </div>
           <div>
             <h4 className="font-bold text-amber-600 flex items-center gap-2 mb-3 uppercase text-xs tracking-wider"><Wand2 size={14} /> Soft Rules (Optimization Goals)</h4>
             <ul className="space-y-3">
               {shiftMode === 'day' ? (
-                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Admits:</strong> Avoid assigning an admission to a nurse who is caring for an Acuity 4 patient.</span></li>
+                <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">High Acuity & Admits:</strong> Avoid assigning an admission to a nurse who is caring for an Acuity 4 patient.</span></li>
               ) : (
                 <>
-                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">High Acuity & Discharges:</strong> Avoid assigning a discharge to a nurse who is caring for an Acuity 4 patient.</span></li>
-                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Transplant Pairings:</strong> Avoid combining a transplant with a discharge or a non-transplant Acuity 4 patient on the same nurse.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">High Acuity & Discharges:</strong> Avoid assigning a discharge to a nurse who is caring for an Acuity 4 patient.</span></li>
+                  <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Transplant Pairings:</strong> Avoid combining a transplant with a discharge or a non-transplant Acuity 4 patient on the same nurse.</span></li>
                 </>
               )}
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Heavy Load Balancing:</strong> Avoid total acuity scores of 10+ and 4th patients on nurses with admissions.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Acuity Distribution:</strong> If a nurse has 4 patients, the system attempts to ensure all patients are Acuity 2 or lower.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Priority Placement:</strong> Hard-to-place patients (Chemo, High Acuity, IMC) are assigned first.</span></li>
-              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800">Wing Locality:</strong> The algorithm prefers assigning rooms within the same wing (North or South) to each nurse.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Heavy Load Balancing:</strong> Avoid total acuity scores of 10+ and 4th patients on nurses with admissions.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Acuity Distribution:</strong> If a nurse has 4 patients, the system attempts to ensure all patients are Acuity 2 or lower.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Priority Placement:</strong> Hard-to-place patients (Chemo, High Acuity, IMC) are assigned first.</span></li>
+              <li className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></span><span><strong className="text-slate-800 dark:text-slate-200">Wing Locality:</strong> The algorithm prefers assigning rooms within the same wing (North or South) to each nurse.</span></li>
             </ul>
           </div>
         </div>
-        <div className="mt-6 pt-4 border-t border-slate-100 text-xs">
-          <strong className="text-slate-700 block mb-2">Visual Indicator Legend:</strong>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500">
+        <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 text-xs">
+          <strong className="text-slate-700 dark:text-slate-300 block mb-2">Visual Indicator Legend:</strong>
+          <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500 dark:text-slate-400">
             {shiftMode === 'day' ? (
               <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">A</span></span>
             ) : (
@@ -1174,7 +1191,7 @@ export default function App() {
           </div>
         </div>
       </div>
-      <footer className="mt-6 text-center text-xs text-slate-400">
+      <footer className="mt-6 text-center text-xs text-slate-400 dark:text-slate-600">
         v{__BUILD_DATE__} &middot; {__COMMIT_HASH__}
       </footer>
       <Analytics />

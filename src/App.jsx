@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon } from 'lucide-react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon, Pencil } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
 const initialNurses = [
@@ -782,56 +782,56 @@ export default function App() {
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4">
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
           <div className="flex flex-col items-center justify-center p-3 bg-red-50 dark:bg-slate-700 rounded-lg border border-red-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider mb-1">Nurses</span>
+            <span className="text-xs text-red-600 dark:text-red-300 font-bold uppercase tracking-wider mb-1">Nurses</span>
             <span className="text-3xl font-black text-red-900 dark:text-red-200 leading-none">{summaryStats.activeNursesCount}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-orange-50 dark:bg-slate-700 rounded-lg border border-orange-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider mb-1">Census</span>
+            <span className="text-xs text-orange-600 dark:text-orange-300 font-bold uppercase tracking-wider mb-1">Census</span>
             <span className="text-3xl font-black text-orange-900 dark:text-orange-200 leading-none">{summaryStats.census}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-amber-50 dark:bg-slate-700 rounded-lg border border-amber-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider mb-1">Total Acuity</span>
+            <span className="text-xs text-amber-600 dark:text-amber-300 font-bold uppercase tracking-wider mb-1">Total Acuity</span>
             <span className="text-3xl font-black text-amber-900 dark:text-amber-200 leading-none">{summaryStats.totalAcuity}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-green-50 dark:bg-slate-700 rounded-lg border border-green-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-green-600 dark:text-green-400 font-bold uppercase tracking-wider mb-1">Acuity 4</span>
+            <span className="text-xs text-green-600 dark:text-green-300 font-bold uppercase tracking-wider mb-1">Acuity 4</span>
             <span className="text-3xl font-black text-green-900 dark:text-green-200 leading-none">{summaryStats.acuity4Count}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-lime-50 dark:bg-slate-700 rounded-lg border border-lime-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-lime-600 dark:text-lime-400 font-bold uppercase tracking-wider mb-1">Acuity 3</span>
+            <span className="text-xs text-lime-600 dark:text-lime-300 font-bold uppercase tracking-wider mb-1">Acuity 3</span>
             <span className="text-3xl font-black text-lime-900 dark:text-lime-200 leading-none">{summaryStats.acuity3Count}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-blue-50 dark:bg-slate-700 rounded-lg border border-blue-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1">IMC</span>
+            <span className="text-xs text-blue-600 dark:text-blue-300 font-bold uppercase tracking-wider mb-1">IMC</span>
             <span className="text-3xl font-black text-blue-900 dark:text-blue-200 leading-none">{summaryStats.imcCount}</span>
           </div>
           {shiftMode === 'day' ? (
             <div className="flex flex-col items-center justify-center p-3 bg-indigo-50 dark:bg-slate-700 rounded-lg border border-indigo-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-              <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider mb-1">Admits</span>
+              <span className="text-xs text-indigo-600 dark:text-indigo-300 font-bold uppercase tracking-wider mb-1">Admits</span>
               <span className="text-3xl font-black text-indigo-900 dark:text-indigo-200 leading-none">{summaryStats.admitsCount}</span>
             </div>
           ) : (
             <>
               <div className="flex flex-col items-center justify-center p-3 bg-orange-50 dark:bg-slate-700 rounded-lg border border-orange-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-                <span className="text-xs text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider mb-1">Discharges</span>
+                <span className="text-xs text-orange-600 dark:text-orange-300 font-bold uppercase tracking-wider mb-1">Discharges</span>
                 <span className="text-3xl font-black text-orange-900 dark:text-orange-200 leading-none">{summaryStats.dischargesCount}</span>
               </div>
               <div className="flex flex-col items-center justify-center p-3 bg-pink-50 dark:bg-slate-700 rounded-lg border border-pink-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-                <span className="text-xs text-pink-600 dark:text-pink-400 font-bold uppercase tracking-wider mb-1">Transplants</span>
+                <span className="text-xs text-pink-600 dark:text-pink-300 font-bold uppercase tracking-wider mb-1">Transplants</span>
                 <span className="text-3xl font-black text-pink-900 dark:text-pink-200 leading-none">{summaryStats.transplantsCount}</span>
               </div>
             </>
           )}
           <div className="flex flex-col items-center justify-center p-3 bg-fuchsia-50 dark:bg-slate-700 rounded-lg border border-fuchsia-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-fuchsia-600 dark:text-fuchsia-400 font-bold uppercase tracking-wider mb-1">Chemo</span>
+            <span className="text-xs text-fuchsia-600 dark:text-fuchsia-300 font-bold uppercase tracking-wider mb-1">Chemo</span>
             <span className="text-3xl font-black text-fuchsia-900 dark:text-fuchsia-200 leading-none">{summaryStats.chemoCount}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-cyan-50 dark:bg-slate-700 rounded-lg border border-cyan-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-bold uppercase tracking-wider mb-1">ICANS</span>
+            <span className="text-xs text-cyan-600 dark:text-cyan-300 font-bold uppercase tracking-wider mb-1">ICANS</span>
             <span className="text-3xl font-black text-cyan-900 dark:text-cyan-200 leading-none">{summaryStats.iecCount}</span>
           </div>
           <div className="flex flex-col items-center justify-center p-3 bg-teal-50 dark:bg-slate-700 rounded-lg border border-teal-100 dark:border-slate-600 min-w-[100px] flex-1 sm:flex-none">
-            <span className="text-xs text-teal-600 dark:text-teal-400 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
+            <span className="text-xs text-teal-600 dark:text-teal-300 font-bold uppercase tracking-wider mb-1">CNA Assigned</span>
             <span className="text-3xl font-black text-teal-900 dark:text-teal-200 leading-none">{summaryStats.cnaCount}</span>
           </div>
         </div>
@@ -926,7 +926,11 @@ export default function App() {
                     />
                   </div>
                 </div>
-                <button onClick={clearAssignments} className={`p-1.5 rounded-md transition-colors border ${isClearingAssignments ? 'bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'bg-white dark:bg-slate-600 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-500'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}><UserMinus size={18} /></button>
+                <button onClick={clearAssignments} className={`rounded-md transition-colors border ${isClearingAssignments ? 'px-2 py-1.5 bg-rose-100 text-rose-700 border-rose-200 hover:bg-rose-200' : 'p-1.5 bg-white dark:bg-slate-600 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-500 hover:text-slate-700 hover:bg-slate-50 dark:hover:bg-slate-500'}`} title={isClearingAssignments ? "Confirm Clear?" : "Clear All Unlocked Assignments"}>
+                  {isClearingAssignments
+                    ? <span className="flex items-center gap-1 text-xs font-bold"><UserMinus size={14} />Confirm?</span>
+                    : <UserMinus size={18} />}
+                </button>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -990,9 +994,9 @@ export default function App() {
                     if (crossWingWarning) tooltipMsgs.push("Soft Limit: RN has rooms in both wings.");
 
                     let rowClass = 'hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-150';
-                    if (hasCriticalWarning) rowClass = 'bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30';
-                    else if (hasSoftWarning) rowClass = 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30';
-                    else if (nurse.locked) rowClass = 'bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30';
+                    if (hasCriticalWarning) rowClass = 'bg-rose-50 dark:bg-rose-900/40 hover:bg-rose-100 dark:hover:bg-rose-900/50';
+                    else if (hasSoftWarning) rowClass = 'bg-amber-50 dark:bg-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/50';
+                    else if (nurse.locked) rowClass = 'bg-purple-50 dark:bg-purple-900/40 hover:bg-purple-100 dark:hover:bg-purple-900/50';
 
                     const nameClass = hasCriticalWarning ? 'text-rose-700' : (hasSoftWarning ? 'text-amber-700' : (nurse.locked ? 'text-purple-700 font-semibold' : ''));
                     let acuityClass = 'text-slate-400';
@@ -1033,11 +1037,12 @@ export default function App() {
                             <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 dark:group-hover:bg-slate-700 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
                                 <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
-                                  {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[9px] relative -top-1.5 flex gap-0.5">{shiftMode === 'day' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'night' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'night' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
+                                  {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[11px] relative -top-1.5 flex gap-0.5">{shiftMode === 'day' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'night' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'night' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
                                   <span className="font-semibold text-sm leading-none">{r.id}</span>
-                                  <span className="font-bold text-[9px] text-slate-500 relative -top-1.5">{r.acuity}</span>
+                                  <span className="font-bold text-[11px] text-slate-500 relative -top-1.5">{r.acuity}</span>
                                 </span>
                               )) : <span className="text-slate-400 italic text-xs">{nurse.name ? "Click to assign" : "None"}</span>}
+                              {stats.rooms.length > 0 && <span className="opacity-0 group-hover:opacity-50 transition-opacity ml-0.5 text-slate-400 dark:text-slate-500 self-center"><Pencil size={10} /></span>}
                             </div>
                           )}
                         </td>
@@ -1050,14 +1055,17 @@ export default function App() {
                   })}
                   <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                     <td colSpan={7} className="px-3 py-2">
-                      <input
-                        type="text"
-                        className="w-full bg-transparent text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none dark:text-slate-200"
-                        placeholder="+ Add a nurse..."
-                        value={newNurseName}
-                        onChange={(e) => setNewNurseName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && addNurse()}
-                      />
+                      <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                        <Plus size={14} className="shrink-0" />
+                        <input
+                          type="text"
+                          className="flex-1 bg-transparent text-sm placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none dark:text-slate-200"
+                          placeholder="Add a nurse..."
+                          value={newNurseName}
+                          onChange={(e) => setNewNurseName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && addNurse()}
+                        />
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -1105,28 +1113,28 @@ export default function App() {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                   {rooms.map((room, index) => (
                     <tr key={room.room} className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 ${room.rn !== '-' ? 'bg-slate-50/50 dark:bg-slate-700/20' : ''}`}>
-                      <td className="px-3 py-1 text-center font-medium text-slate-700 dark:text-slate-300">{room.room}</td>
-                      <td className="px-2 py-1"><input type="text" className="w-full p-1.5 border border-transparent hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 dark:placeholder-slate-500 focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
-                      <td className="px-2 py-1"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-transparent hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
+                      <td className="px-3 py-1.5 text-center font-medium text-slate-700 dark:text-slate-300">{room.room}</td>
+                      <td className="px-2 py-1.5"><input type="text" className="w-full p-1.5 border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 dark:placeholder-slate-500 focus:ring-1 focus:ring-blue-500" value={room.tx} onChange={(e) => updateRoom(index, 'tx', e.target.value)} placeholder="Empty room..." /></td>
+                      <td className="px-2 py-1.5"><input type="number" min="1" max="4" className="w-full p-1.5 text-center border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 rounded bg-transparent dark:text-slate-200 font-semibold focus:ring-1 focus:ring-blue-500" value={room.acuity || ''} onChange={(e) => updateRoom(index, 'acuity', e.target.value)} /></td>
+                      <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-purple-600 rounded border-slate-300 cursor-pointer" checked={room.imc || false} onChange={(e) => updateRoom(index, 'imc', e.target.checked)} /></td>
                       {shiftMode === 'day' ? (
-                        <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
+                        <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-green-600 rounded border-slate-300 cursor-pointer" checked={room.admit || false} onChange={(e) => updateRoom(index, 'admit', e.target.checked)} /></td>
                       ) : (
                         <>
-                          <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer" checked={room.discharge || false} onChange={(e) => updateRoom(index, 'discharge', e.target.checked)} /></td>
-                          <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-pink-600 rounded border-slate-300 cursor-pointer" checked={room.transplant || false} onChange={(e) => updateRoom(index, 'transplant', e.target.checked)} /></td>
+                          <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-orange-600 rounded border-slate-300 cursor-pointer" checked={room.discharge || false} onChange={(e) => updateRoom(index, 'discharge', e.target.checked)} /></td>
+                          <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-pink-600 rounded border-slate-300 cursor-pointer" checked={room.transplant || false} onChange={(e) => updateRoom(index, 'transplant', e.target.checked)} /></td>
                         </>
                       )}
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={room.iec || false} onChange={(e) => updateRoom(index, 'iec', e.target.checked)} /></td>
-                      <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
-                      <td className="px-2 py-1">
+                      <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-rose-600 rounded border-slate-300 cursor-pointer" checked={room.chemo || false} onChange={(e) => updateRoom(index, 'chemo', e.target.checked)} /></td>
+                      <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={room.iec || false} onChange={(e) => updateRoom(index, 'iec', e.target.checked)} /></td>
+                      <td className="px-2 py-1.5 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={room.cna || false} onChange={(e) => updateRoom(index, 'cna', e.target.checked)} /></td>
+                      <td className="px-2 py-1.5">
                         <select className={`w-full p-1.5 border rounded-md text-sm font-medium ${room.locked ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-700 text-purple-700 dark:text-purple-300' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 dark:text-slate-200'}`} value={room.rn} onChange={(e) => updateRoom(index, 'rn', e.target.value)}>
                           <option value="-">- Unassigned -</option>
                           {nurses.filter(n => n.name.trim() !== '').map(nurse => <option key={nurse.id} value={nurse.name}>{nurse.name}</option>)}
                         </select>
                       </td>
-                      <td className="px-2 py-1 text-center"><button onClick={() => toggleLock(index)} className={`p-1.5 rounded-md transition-colors ${room.locked ? 'text-purple-600 bg-purple-100' : 'text-slate-400 hover:bg-slate-100'}`}>{room.locked ? <Lock size={14} /> : <Unlock size={14} />}</button></td>
+                      <td className="px-2 py-1.5 text-center"><button onClick={() => toggleLock(index)} className={`p-1.5 rounded-md transition-colors ${room.locked ? 'text-purple-600 bg-purple-100' : 'text-slate-400 hover:bg-slate-100'}`}>{room.locked ? <Lock size={14} /> : <Unlock size={14} />}</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1183,17 +1191,17 @@ export default function App() {
           <strong className="text-slate-700 dark:text-slate-300 block mb-2">Visual Indicator Legend:</strong>
           <div className="flex flex-wrap gap-x-6 gap-y-2 text-slate-500 dark:text-slate-400">
             {shiftMode === 'day' ? (
-              <span className="flex items-center gap-1">Admit <span className="font-bold text-[10px] text-green-600 bg-blue-100 px-1 rounded -mt-1">A</span></span>
+              <span className="flex items-center gap-1">Admit <span className="font-bold text-xs text-green-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">A</span></span>
             ) : (
               <>
-                <span className="flex items-center gap-1">Discharge <span className="font-bold text-[10px] text-orange-600 bg-blue-100 px-1 rounded -mt-1">D</span></span>
-                <span className="flex items-center gap-1">Transplant <span className="font-bold text-[10px] text-pink-600 bg-blue-100 px-1 rounded -mt-1">T</span></span>
+                <span className="flex items-center gap-1">Discharge <span className="font-bold text-xs text-orange-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">D</span></span>
+                <span className="flex items-center gap-1">Transplant <span className="font-bold text-xs text-pink-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">T</span></span>
               </>
             )}
-            <span className="flex items-center gap-1">Chemo <span className="font-bold text-[10px] text-rose-600 bg-blue-100 px-1 rounded -mt-1">C</span></span>
-            <span className="flex items-center gap-1">ICANS <span className="font-bold text-[10px] text-cyan-600 bg-blue-100 px-1 rounded -mt-1">E</span></span>
-            <span className="flex items-center gap-1">IMC <span className="font-bold text-[10px] text-purple-600 bg-blue-100 px-1 rounded -mt-1">I</span></span>
-            <span className="flex items-center gap-1">Acuity <span className="font-bold text-[9px] text-slate-500 bg-blue-100 px-1 rounded -mt-1 ml-0.5">2</span></span>
+            <span className="flex items-center gap-1">Chemo <span className="font-bold text-xs text-rose-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">C</span></span>
+            <span className="flex items-center gap-1">ICANS <span className="font-bold text-xs text-cyan-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">E</span></span>
+            <span className="flex items-center gap-1">IMC <span className="font-bold text-xs text-purple-600 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1">I</span></span>
+            <span className="flex items-center gap-1">Acuity <span className="font-bold text-xs text-slate-500 bg-blue-100 dark:bg-slate-700 px-1 rounded -mt-1 ml-0.5">2</span></span>
             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-rose-50 border border-rose-200 inline-block rounded-sm"></span> Rule Violation</span>
             <span className="flex items-center gap-2"><span className="w-3 h-3 bg-amber-50 border border-amber-200 inline-block rounded-sm"></span> Soft Limit Warning</span>
           </div>

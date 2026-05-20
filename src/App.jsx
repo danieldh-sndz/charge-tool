@@ -118,7 +118,7 @@ const NURSE_COLORS = [
 const ACUITY_COLOR = { 1: '#94a3b8', 2: '#94a3b8', 3: '#f59e0b', 4: '#ef4444' };
 
 // Defined outside App so React doesn't unmount/remount it on every parent render
-function UnitMap({ rooms, nurses, hoveredNurse, shiftMode }) {
+function UnitMap({ rooms, nurses, hoveredNurse, shiftMode, isDarkMode }) {
   const nurseColorMap = {};
   nurses.filter(n => n.name?.trim()).forEach((nurse, i) => {
     nurseColorMap[nurse.name] = NURSE_COLORS[i % NURSE_COLORS.length];
@@ -126,7 +126,7 @@ function UnitMap({ rooms, nurses, hoveredNurse, shiftMode }) {
   const hoveredColor = hoveredNurse ? (nurseColorMap[hoveredNurse] || NURSE_COLORS[0]) : null;
 
   return (
-    <div className="bg-slate-100 rounded-xl border border-slate-200 flex justify-center overflow-hidden">
+    <div className="bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-center overflow-hidden">
       <svg width="100%" height="550" viewBox="0 0 700 560" preserveAspectRatio="xMidYMid meet">
         <defs>
           <filter id="room-shadow" x="-25%" y="-25%" width="150%" height="150%">
@@ -148,11 +148,19 @@ function UnitMap({ rooms, nurses, hoveredNurse, shiftMode }) {
 
           let fillColor, strokeColor, strokeWidth, textColor;
           if (!isFilled) {
-            fillColor = '#f1f5f9'; strokeColor = '#e2e8f0'; strokeWidth = 1;   textColor = '#94a3b8';
+            fillColor   = isDarkMode ? '#1e293b' : '#f1f5f9';
+            strokeColor = isDarkMode ? '#334155' : '#e2e8f0';
+            strokeWidth = 1;
+            textColor   = isDarkMode ? '#64748b' : '#94a3b8';
           } else if (isHighlighted) {
             fillColor = hoveredColor.fill; strokeColor = hoveredColor.stroke; strokeWidth = 2.5; textColor = hoveredColor.text;
           } else {
-            fillColor = '#ffffff'; strokeColor = hasRn ? '#94a3b8' : '#d1d5db'; strokeWidth = 1.5; textColor = '#374151';
+            fillColor   = isDarkMode ? '#334155' : '#ffffff';
+            strokeColor = isDarkMode
+              ? (hasRn ? '#64748b' : '#475569')
+              : (hasRn ? '#94a3b8' : '#d1d5db');
+            strokeWidth = 1.5;
+            textColor   = isDarkMode ? '#e2e8f0' : '#374151';
           }
 
           const displayName = hasRn && isFilled
@@ -1061,7 +1069,7 @@ export default function App() {
         <div className="w-full md:w-1/2 xl:w-7/12 flex flex-col gap-6">
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600"><h2 className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2"><MapIcon size={18} className="text-blue-600 dark:text-blue-400" />Unit Map</h2></div>
-            <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} shiftMode={shiftMode} />
+            <UnitMap rooms={rooms} nurses={nurses} hoveredNurse={hoveredNurse} shiftMode={shiftMode} isDarkMode={isDarkMode} />
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="bg-slate-100 dark:bg-slate-700 px-4 py-3 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">

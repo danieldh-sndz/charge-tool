@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon, Pencil } from 'lucide-react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon, Pencil, GripVertical } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
 
 const initialNurses = [
@@ -264,6 +264,14 @@ export default function App() {
   const [newNurseName, setNewNurseName] = useState('');
   const [isClearingAssignments, setIsClearingAssignments] = useState(false);
   const [hoveredNurse, setHoveredNurse] = useState(null);
+
+  // Drag-and-drop: reassign rooms between nurses and reorder the nurse list.
+  // The active drag is kept in a ref so event handlers read it synchronously;
+  // the state values below only drive the visual feedback (highlight / insertion line).
+  const dragSource = useRef(null); // { kind: 'room', room, from } | { kind: 'reorder', index }
+  const [dragKind, setDragKind] = useState(null);        // 'room' | 'reorder' | null
+  const [dropNurseIdx, setDropNurseIdx] = useState(null); // nurse row highlighted as a room drop target
+  const [reorderOver, setReorderOver] = useState(null);   // { index, position: 'before' | 'after' }
 
   // Refs for confirm-action timeouts so they can be cleaned up on unmount
   const clearingTimerRef = useRef(null);
@@ -714,6 +722,87 @@ export default function App() {
     setNurses(newNurses);
   };
 
+  // --- Drag and drop --------------------------------------------------------
+
+  // Reassign a single room to a different nurse (used when a room chip is dropped on a nurse row).
+  const assignRoomToNurse = (roomId, nurseName) => {
+    setRooms(prev => prev.map(r => (String(r.room) === String(roomId) ? { ...r, rn: nurseName } : r)));
+  };
+
+  // Move a nurse to a new position. `position` is 'before' | 'after' relative to targetIndex.
+  const moveNurse = (fromIndex, targetIndex, position) => {
+    setNurses(prev => {
+      if (fromIndex == null || targetIndex == null || fromIndex < 0 || fromIndex >= prev.length) return prev;
+      const moved = prev[fromIndex];
+      const withoutMoved = prev.filter((_, i) => i !== fromIndex);
+      let targetPos = targetIndex;
+      if (fromIndex < targetIndex) targetPos -= 1; // target shifts left once the dragged item is removed
+      let insertAt = position === 'after' ? targetPos + 1 : targetPos;
+      insertAt = Math.max(0, Math.min(withoutMoved.length, insertAt));
+      withoutMoved.splice(insertAt, 0, moved);
+      const unchanged = withoutMoved.length === prev.length && withoutMoved.every((n, i) => n === prev[i]);
+      return unchanged ? prev : withoutMoved;
+    });
+  };
+
+  const clearDrag = () => {
+    dragSource.current = null;
+    setDragKind(null);
+    setDropNurseIdx(null);
+    setReorderOver(null);
+  };
+
+  const handleRoomDragStart = (e, roomId, fromName) => {
+    dragSource.current = { kind: 'room', room: roomId, from: fromName };
+    setDragKind('room');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(roomId)); } catch { /* some browsers restrict setData */ }
+    e.stopPropagation();
+  };
+
+  const handleNurseDragStart = (e, index) => {
+    dragSource.current = { kind: 'reorder', index };
+    setDragKind('reorder');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', `nurse:${index}`); } catch { /* ignore */ }
+  };
+
+  const handleNurseRowDragOver = (e, index) => {
+    const src = dragSource.current;
+    if (!src) return;
+    if (src.kind === 'room') {
+      const target = nurses[index];
+      if (target && target.name.trim() !== '' && src.from !== target.name) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropNurseIdx(prev => (prev === index ? prev : index));
+      }
+    } else if (src.kind === 'reorder') {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = e.currentTarget.getBoundingClientRect();
+      const position = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+      setReorderOver(prev => (prev && prev.index === index && prev.position === position ? prev : { index, position }));
+    }
+  };
+
+  const handleNurseRowDrop = (e, index) => {
+    const src = dragSource.current;
+    if (!src) { clearDrag(); return; }
+    e.preventDefault();
+    if (src.kind === 'room') {
+      const target = nurses[index];
+      if (target && target.name.trim() !== '' && src.from !== target.name) {
+        assignRoomToNurse(src.room, target.name);
+      }
+    } else if (src.kind === 'reorder') {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const position = e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+      moveNurse(src.index, index, position);
+    }
+    clearDrag();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-6 font-sans text-slate-800 dark:text-slate-100 pb-20 relative">
 
@@ -937,6 +1026,7 @@ export default function App() {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
                   <tr>
+                    <th className="px-1 py-2 w-6"></th>
                     <th className="px-2 py-2 w-8 text-center"></th>
                     <th className="px-2 py-2 w-16 text-center">No Chemo</th>
                     <th className="px-2 py-2 w-16 text-center">No ICANS</th>
@@ -1005,8 +1095,42 @@ export default function App() {
                     else if (stats.acuity >= 6) acuityClass = 'bg-emerald-100 text-emerald-700';
                     else if (stats.acuity > 0) acuityClass = 'bg-slate-100 text-slate-700';
 
+                    // Drag-and-drop visual state for this row
+                    const dragSrc = dragSource.current;
+                    const isRoomDropTarget = dragKind === 'room' && dragSrc && dropNurseIdx === index
+                      && nurse.name.trim() !== '' && dragSrc.from !== nurse.name;
+                    const isReorderSource = dragKind === 'reorder' && dragSrc && dragSrc.index === index;
+                    let dragCls = '';
+                    if (isRoomDropTarget) dragCls += ' !bg-blue-100 dark:!bg-blue-900/40';
+                    if (isReorderSource) dragCls += ' opacity-40';
+                    const rowStyle = (dragKind === 'reorder' && reorderOver && reorderOver.index === index)
+                      ? (reorderOver.position === 'before'
+                          ? { borderTop: '2px solid #6366f1' }
+                          : { borderBottom: '2px solid #6366f1' })
+                      : undefined;
+
                     return (
-                      <tr key={nurse.id} className={rowClass} onMouseEnter={() => setHoveredNurse(nurse.name)} onMouseLeave={() => setHoveredNurse(null)}>
+                      <tr
+                        key={nurse.id}
+                        className={rowClass + dragCls}
+                        style={rowStyle}
+                        onMouseEnter={() => setHoveredNurse(nurse.name)}
+                        onMouseLeave={() => setHoveredNurse(null)}
+                        onDragOver={(e) => handleNurseRowDragOver(e, index)}
+                        onDrop={(e) => handleNurseRowDrop(e, index)}
+                      >
+                        <td className="px-1 py-1 text-center">
+                          <div
+                            draggable
+                            onDragStart={(e) => handleNurseDragStart(e, index)}
+                            onDragEnd={clearDrag}
+                            className="flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400"
+                            title="Drag to reorder nurse"
+                            aria-label="Drag to reorder nurse"
+                          >
+                            <GripVertical size={16} />
+                          </div>
+                        </td>
                         <td className="px-2 py-1 text-center"><button onClick={() => toggleNurseLock(index)} className={`p-1 rounded-md transition-colors ${nurse.locked ? 'text-purple-600' : 'text-slate-300 hover:text-slate-500'}`}>{nurse.locked ? <Lock size={14} /> : <Unlock size={14} />}</button></td>
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-slate-300 cursor-pointer" checked={nurse.noChemo || false} onChange={(e) => updateNurse(index, 'noChemo', e.target.checked)} /></td>
                         <td className="px-2 py-1 text-center"><input type="checkbox" className="w-4 h-4 text-cyan-600 rounded border-slate-300 cursor-pointer" checked={nurse.noIec || false} onChange={(e) => updateNurse(index, 'noIec', e.target.checked)} /></td>
@@ -1036,7 +1160,14 @@ export default function App() {
                           ) : (
                             <div className="flex flex-wrap gap-1 min-h-[1.75rem] items-center p-1 rounded group-hover:bg-slate-100 dark:group-hover:bg-slate-700 transition-colors">
                               {stats.rooms.length > 0 ? stats.rooms.map(r => (
-                                <span key={r.id} className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5`} title={tooltipMsgs.join(' | ')}>
+                                <span
+                                  key={r.id}
+                                  draggable
+                                  onDragStart={(e) => handleRoomDragStart(e, r.id, nurse.name)}
+                                  onDragEnd={clearDrag}
+                                  className={`${r.cna ? 'bg-green-100 text-green-800 border-green-200' : 'bg-blue-100 text-blue-800 border-blue-200'} px-1.5 py-0.5 rounded border inline-flex items-baseline gap-0.5 cursor-grab active:cursor-grabbing`}
+                                  title={tooltipMsgs.length ? tooltipMsgs.join(' | ') : 'Drag to reassign to another nurse'}
+                                >
                                   {(r.admit || r.discharge || r.transplant || r.chemo || r.iec || r.imc) && <span className="font-bold text-[11px] relative -top-1.5 flex gap-0.5">{shiftMode === 'day' && r.admit && <span className="text-green-600">A</span>}{shiftMode === 'night' && r.discharge && <span className="text-orange-600">D</span>}{shiftMode === 'night' && r.transplant && <span className="text-pink-600">T</span>}{r.chemo && <span className="text-rose-600">C</span>}{r.iec && <span className="text-cyan-600">E</span>}{r.imc && <span className="text-purple-600">I</span>}</span>}
                                   <span className="font-semibold text-sm leading-none">{r.id}</span>
                                   <span className="font-bold text-[11px] text-slate-500 relative -top-1.5">{r.acuity}</span>
@@ -1054,7 +1185,7 @@ export default function App() {
                     );
                   })}
                   <tr className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                    <td colSpan={7} className="px-3 py-2">
+                    <td colSpan={8} className="px-3 py-2">
                       <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
                         <Plus size={14} className="shrink-0" />
                         <input

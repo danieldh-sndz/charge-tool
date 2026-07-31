@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon, Pencil, GripVertical } from 'lucide-react';
+import { Users, BedDouble, Plus, Printer, Wand2, Info, ListChecks, Lock, Unlock, RefreshCw, Eraser, AlertTriangle, CheckCircle2, UserMinus, Map as MapIcon, UserCheck, X, Sun, Moon, Pencil, GripVertical, Share2, Copy, Link2, Loader2 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
+import { saveBoard, loadBoard, formatSecret, shareUrl, codeFromHash, BoardCodeError } from './boardCode';
 
 const initialNurses = [
   { id: 1, noChemo: false, noIec: false, name: 'RN 1', locked: false },
@@ -244,7 +245,9 @@ function UnitMap({ rooms, nurses, hoveredNurse, shiftMode, isDarkMode }) {
 export default function App() {
   const [nurses, setNurses] = useState(() => {
     const stored = loadState('nurses', null);
-    if (!stored || stored.length < 11) return initialNurses;
+    // Only fall back to the defaults when nothing usable is stored — a board
+    // loaded from a code may legitimately have fewer than 11 nurses.
+    if (!Array.isArray(stored) || stored.length === 0) return initialNurses;
     return stored;
   });
   const [rooms, setRooms] = useState(() => {
@@ -285,6 +288,127 @@ export default function App() {
   }, []);
 
   const [isDarkMode, setIsDarkMode] = useState(() => loadState('darkMode', false));
+
+  // --- Board codes ----------------------------------------------------------
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [savedCode, setSavedCode] = useState(null);
+  const [codeInput, setCodeInput] = useState('');
+  const [shareBusy, setShareBusy] = useState(null); // 'saving' | 'loading' | null
+  const [shareError, setShareError] = useState(null);
+  const [shareNotice, setShareNotice] = useState(null);
+  const [isConfirmingLoad, setIsConfirmingLoad] = useState(false);
+  const confirmLoadTimerRef = useRef(null);
+  const codeFieldRef = useRef(null);
+
+  // Decided synchronously so the local board never flashes before a shared one
+  // replaces it.
+  const [hydrating, setHydrating] = useState(() => !!codeFromHash(window.location.hash));
+  const hydratedRef = useRef(false);
+
+  const applyBoard = (board) => {
+    setNurses(board.nurses);
+    setRooms(board.rooms);
+    setShiftMode(board.shiftMode);
+    setCnaCount(board.cnaCount);
+    setRationale(null);
+  };
+
+  useEffect(() => {
+    // StrictMode double-invokes mount effects in dev, and this one stops being
+    // idempotent once the hash is stripped.
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+
+    const code = codeFromHash(window.location.hash);
+    if (!code) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const board = await loadBoard(code);
+        if (cancelled) return;
+        applyBoard(board);
+      } catch (err) {
+        if (cancelled) return;
+        setShareError(err instanceof BoardCodeError ? err.message : 'Could not open that link.');
+        setShowShareModal(true);
+      } finally {
+        if (!cancelled) {
+          // Keep the secret out of the address bar and out of a refresh.
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          setHydrating(false);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => () => clearTimeout(confirmLoadTimerRef.current), []);
+
+  // A code describes the board as it was saved, so drop it once the board is
+  // edited rather than showing a code that no longer matches what's on screen.
+  useEffect(() => {
+    setSavedCode(null);
+  }, [nurses, rooms, shiftMode, cnaCount]);
+
+  const handleSaveBoard = async () => {
+    setShareBusy('saving');
+    setShareError(null);
+    setShareNotice(null);
+    try {
+      const code = await saveBoard({ nurses, rooms, shiftMode, cnaCount });
+      setSavedCode(code);
+    } catch (err) {
+      setShareError(err instanceof BoardCodeError ? err.message : 'Could not save this board.');
+    } finally {
+      setShareBusy(null);
+    }
+  };
+
+  const handleLoadBoard = async () => {
+    if (!isConfirmingLoad) {
+      setIsConfirmingLoad(true);
+      clearTimeout(confirmLoadTimerRef.current);
+      confirmLoadTimerRef.current = setTimeout(() => setIsConfirmingLoad(false), 3000);
+      return;
+    }
+    clearTimeout(confirmLoadTimerRef.current);
+    setIsConfirmingLoad(false);
+    setShareBusy('loading');
+    setShareError(null);
+    setShareNotice(null);
+    try {
+      const board = await loadBoard(codeInput);
+      applyBoard(board);
+      setShareNotice('Board loaded.');
+      setCodeInput('');
+    } catch (err) {
+      setShareError(err instanceof BoardCodeError ? err.message : 'Could not open that code.');
+    } finally {
+      setShareBusy(null);
+    }
+  };
+
+  const copyToClipboard = async (text, label) => {
+    setShareError(null);
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareNotice(`${label} copied.`);
+    } catch {
+      // Non-HTTPS or denied permission — select the code so ⌘C still works.
+      codeFieldRef.current?.select?.();
+      setShareNotice('Press ⌘C / Ctrl+C to copy.');
+    }
+  };
+
+  const closeShareModal = () => {
+    setShowShareModal(false);
+    setShareError(null);
+    setShareNotice(null);
+    setIsConfirmingLoad(false);
+    clearTimeout(confirmLoadTimerRef.current);
+  };
 
   useEffect(() => { saveState('nurses', nurses); }, [nurses]);
   useEffect(() => { saveState('rooms', rooms); }, [rooms]);
@@ -803,6 +927,15 @@ export default function App() {
     clearDrag();
   };
 
+  if (hydrating) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center gap-3 font-sans text-slate-500 dark:text-slate-400">
+        <Loader2 size={28} className="animate-spin text-blue-600 dark:text-blue-400" />
+        <p className="text-sm font-medium">Loading board&hellip;</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-4 md:p-6 font-sans text-slate-800 dark:text-slate-100 pb-20 relative">
 
@@ -867,6 +1000,115 @@ export default function App() {
         </div>
       )}
 
+      {/* Share / Board Code Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <Share2 size={20} />
+                Save or Load a Board
+              </h3>
+              <button onClick={closeShareModal} className="text-white/80 hover:text-white" aria-label="Close">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Save */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Save this board</h4>
+                {savedCode ? (
+                  <div className="space-y-3">
+                    <input
+                      ref={codeFieldRef}
+                      readOnly
+                      value={formatSecret(savedCode)}
+                      onFocus={(e) => e.target.select()}
+                      className="w-full text-center font-mono text-xl md:text-2xl tracking-widest p-3 rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200 font-bold"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => copyToClipboard(formatSecret(savedCode), 'Code')} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">
+                        <Copy size={14} />Copy Code
+                      </button>
+                      <button onClick={() => copyToClipboard(shareUrl(savedCode), 'Link')} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
+                        <Link2 size={14} />Copy Link
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Anyone with this code can open the board. It expires in 30 days. Saving again creates a new code.
+                    </p>
+                    <button onClick={handleSaveBoard} disabled={shareBusy !== null} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
+                      Save again as a new code
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleSaveBoard}
+                      disabled={shareBusy !== null}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold rounded-lg transition-colors shadow-sm"
+                    >
+                      {shareBusy === 'saving' ? <><Loader2 size={16} className="animate-spin" />Saving&hellip;</> : <><Share2 size={16} />Save Board</>}
+                    </button>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      Creates a short code you can use to reopen this board on any device.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div className="border-t border-slate-200 dark:border-slate-600" />
+
+              {/* Load */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">Open a saved board</h4>
+                <input
+                  type="text"
+                  value={codeInput}
+                  onChange={(e) => { setCodeInput(e.target.value); setIsConfirmingLoad(false); }}
+                  placeholder="K7M2-QX9V-3HTB-P5RN"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="w-full p-2.5 font-mono tracking-wider text-center border rounded-lg bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-800 dark:text-slate-100 dark:placeholder-slate-500 focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleLoadBoard}
+                  disabled={shareBusy !== null || codeInput.trim() === ''}
+                  className={`w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 ${isConfirmingLoad ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-slate-700 hover:bg-slate-800 dark:bg-slate-600 dark:hover:bg-slate-500 text-white'}`}
+                >
+                  {shareBusy === 'loading'
+                    ? <><Loader2 size={16} className="animate-spin" />Loading&hellip;</>
+                    : isConfirmingLoad
+                      ? <><AlertTriangle size={16} />Replace current board?</>
+                      : 'Load Board'}
+                </button>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                  This replaces the board you have open now. Dashes and capitals are optional.
+                </p>
+              </div>
+
+              {shareError && (
+                <div className="flex gap-2 items-start text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-lg p-3">
+                  <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                  <span>{shareError}</span>
+                </div>
+              )}
+              {shareNotice && !shareError && (
+                <div className="flex gap-2 items-start text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
+                  <span>{shareNotice}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-4 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-600">
+              <button onClick={closeShareModal} className="px-4 py-2 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header / Summary */}
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 gap-4">
         <div className="flex flex-wrap gap-3 w-full xl:w-auto">
@@ -925,6 +1167,15 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3 self-start xl:self-center flex-wrap">
+          <button
+            type="button"
+            aria-label="Save or load a board"
+            title="Save or load a board"
+            onClick={() => { setShareError(null); setShareNotice(null); setShowShareModal(true); }}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600"
+          >
+            <Share2 size={16} />
+          </button>
           <button
             type="button"
             aria-label="Toggle dark mode"
